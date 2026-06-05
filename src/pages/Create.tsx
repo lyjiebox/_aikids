@@ -5,6 +5,7 @@ import { useAppContext } from '../context/AppContext';
 import { generateGame } from '../services/api';
 import TemplatePicker from '../components/TemplatePicker';
 import LoadingAnimation from '../components/LoadingAnimation';
+import { VoiceInput } from '../components/VoiceInput';
 import './Create.css';
 
 function Create() {
@@ -74,17 +75,17 @@ function Create() {
       </div>
 
       <div className="steps">
-        <div className={'step ' + (step >= 1 ? 'active' : '')}>
+        <div className={`step ${step >= 1 ? 'active' : ''}`}>
           <span className="step-num">1</span>
           <span className="step-text">选主题</span>
         </div>
         <div className="step-line"></div>
-        <div className={'step ' + (step >= 2 ? 'active' : '')}>
+        <div className={`step ${step >= 2 ? 'active' : ''}`}>
           <span className="step-num">2</span>
           <span className="step-text">说想法</span>
         </div>
         <div className="step-line"></div>
-        <div className={'step ' + (step >= 3 ? 'active' : '')}>
+        <div className={`step ${step >= 3 ? 'active' : ''}`}>
           <span className="step-num">3</span>
           <span className="step-text">生成游戏</span>
         </div>
@@ -103,16 +104,8 @@ function Create() {
         </div>
 
         <div className="section">
-          <h2 className="section-title">输入你的创意</h2>
-          <div className="text-input-wrapper">
-            <textarea
-              className="text-input"
-              placeholder="在这里输入你的游戏创意..."
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              rows={4}
-            />
-          </div>
+          <h2 className="section-title">说出你的创意</h2>
+          <VoiceInput value={userInput} onChange={setUserInput} />
         </div>
 
         <button
