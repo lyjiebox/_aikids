@@ -1,0 +1,42 @@
+.templatepicker-wrapper {
+  padding: 12px 0;
+}
+
+.templatepicker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.templatepicker-card {
+  background: white;
+  border-radius: 20px;
+  padding: 16px 8px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 2px solid transparent;
+  transition: transform 0.1s;
+  cursor: pointer;
+}
+
+.templatepicker-card:active {
+  transform: scale(0.96);
+}
+
+.templatepicker-card-selected {
+  border-color: #6c5ce7;
+  background: rgba(108, 92, 231, 0.08);
+}
+
+.templatepicker-icon {
+  font-size: 40px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.templatepicker-name {
+  display: block;
+  font-size: 14px;
+  color: #2d3436;
+  font-weight: bold;
+}

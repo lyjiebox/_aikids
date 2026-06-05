@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>太空飞船冒险游戏的世界</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; width: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #74b9ff, #a29bfe);
+      color: #fff;
+    }
+    #container {
+      text-align: center;
+      padding: 20px;
+      width: 90%;
+      max-width: 600px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+    }
+    h1 { font-size: 28px; margin-bottom: 20px; }
+    button {
+      font-size: 24px;
+      padding: 16px 40px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      background: #fd79a8;
+      color: #fff;
+      font-weight: bold;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      transition: transform 0.1s;
+    }
+    button:active { transform: scale(0.96); }
+    #score {
+      font-size: 64px;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+    #prompt {
+      margin-top: 20px;
+      font-size: 16px;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>🎉 太空飞船冒险游戏的世界</h1>
+    <div id="score">0</div>
+    <button id="btn">点击我！</button>
+    <div id="prompt">你的创意: 太空飞船冒险游戏</div>
+  </div>
+  <script>
+    let score = 0;
+    const btn = document.getElementById('btn');
+    const scoreEl = document.getElementById('score');
+    btn.addEventListener('click', () => {
+      score += 1;
+      scoreEl.textContent = String(score);
+      if (score % 10 === 0) {
+        scoreEl.style.transform = 'scale(1.2)';
+        setTimeout(() => {
+          scoreEl.style.transform = 'scale(1)';
+        }, 200);
+      }
+    });
+  </script>
+</body>
+</html>
