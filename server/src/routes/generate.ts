@@ -1,109 +1,146 @@
 import { Hono } from "hono";
 import type { GenerateRequest, GenerateResponse } from "../types";
 
-const generateRoute = new Hono();
-
-// Mock HTML 模板，模拟 AI 生成结果
-const MOCK_GAME_HTML = `
-<!DOCTYPE html>
+// 简单的 Mock 游戏生成器（兜底方案）
+function generateMockGame(prompt: string, templateId?: string) {
+  const games = [
+    {
+      title: "跳跃的小兔子",
+      html: `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{{TITLE}}</title>
+  <title>跳跃的小兔子</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; width: 100%; overflow: hidden; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #74b9ff, #a29bfe);
-      color: #fff;
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+      background: linear-gradient(135deg, #90ee90 0%, #87ceeb 100%);
+      display:flex; align-items:center; justify-content:center; 
+      min-height:100vh; font-family:system-ui, sans-serif;
     }
-    #container {
-      text-align: center;
-      padding: 20px;
-      width: 90%;
-      max-width: 600px;
-      border-radius: 24px;
-      background: rgba(255,255,255,0.15);
-      backdrop-filter: blur(10px);
+    .game {
+      width:100%; max-width:500px; text-align:center; padding:20px;
     }
-    h1 { font-size: 28px; margin-bottom: 20px; }
-    button {
-      font-size: 24px;
-      padding: 16px 40px;
-      border-radius: 999px;
-      border: none;
-      cursor: pointer;
-      background: #fd79a8;
-      color: #fff;
-      font-weight: bold;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    .bunny {
+      font-size:100px; cursor:pointer; display:inline-block;
       transition: transform 0.1s;
     }
-    button:active { transform: scale(0.96); }
-    #score {
-      font-size: 64px;
-      font-weight: bold;
-      margin: 20px 0;
-    }
-    #prompt {
-      margin-top: 20px;
-      font-size: 16px;
-      opacity: 0.9;
+    .bunny:active { transform: translateY(-20px) scale(1.1); }
+    .score {
+      font-size:30px; color:#fff; font-weight:bold; margin-bottom:20px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
   </style>
 </head>
 <body>
-  <div id="container">
-    <h1>🎉 {{TITLE}}</h1>
-    <div id="score">0</div>
-    <button id="btn">点击我！</button>
-    <div id="prompt">你的创意: {{PROMPT}}</div>
+  <div class="game">
+    <div class="score">得分: <span id="score">0</span></div>
+    <div class="bunny" id="bunny">🐰</div>
   </div>
   <script>
     let score = 0;
-    const btn = document.getElementById('btn');
+    const bunny = document.getElementById('bunny');
     const scoreEl = document.getElementById('score');
-    btn.addEventListener('click', () => {
-      score += 1;
-      scoreEl.textContent = String(score);
-      if (score % 10 === 0) {
-        scoreEl.style.transform = 'scale(1.2)';
-        setTimeout(() => {
-          scoreEl.style.transform = 'scale(1)';
-        }, 200);
-      }
+    bunny.addEventListener('click', () => {
+      score++;
+      scoreEl.textContent = score;
+      bunny.style.animation = 'none';
+      setTimeout(() => bunny.style.animation = '', 10);
     });
   </script>
 </body>
-</html>
-`;
+</html>`
+    },
+    {
+      title: "太空飞船大冒险",
+      html: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>太空飞船大冒险</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+      background: linear-gradient(135deg, #0c0c1e 0%, #3a1c71 100%);
+      display:flex; align-items:center; justify-content:center; 
+      min-height:100vh; font-family:system-ui, sans-serif;
+    }
+    .game {
+      width:100%; max-width:500px; text-align:center; padding:20px;
+    }
+    .rocket {
+      font-size:100px; cursor:pointer; display:inline-block;
+      transition: transform 0.1s;
+    }
+    .rocket:active { transform: translateY(-20px) scale(1.1); }
+    .score {
+      font-size:30px; color:#fff; font-weight:bold; margin-bottom:20px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="score">得分: <span id="score">0</span></div>
+    <div class="rocket" id="rocket">🚀</div>
+  </div>
+  <script>
+    let score = 0;
+    const rocket = document.getElementById('rocket');
+    const scoreEl = document.getElementById('score');
+    rocket.addEventListener('click', () => {
+      score++;
+      scoreEl.textContent = score;
+      rocket.style.animation = 'none';
+      setTimeout(() => rocket.style.animation = '', 10);
+    });
+  </script>
+</body>
+</html>`
+    }
+  ];
+  
+  if (templateId === 'animal') return games[0];
+  if (templateId === 'space') return games[1];
+  return games[Math.floor(Math.random() * games.length)];
+}
+
+const generateRoute = new Hono();
 
 generateRoute.post("/", async (c) => {
   try {
     const body = (await c.req.json()) as GenerateRequest;
-    const userPrompt = body.userPrompt || "创建一个小游戏";
-
-    // 模拟 AI 生成过程
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // 生成标题
-    const title = generateTitle(userPrompt);
-    // 替换模板内容
-    const gameHtml = MOCK_GAME_HTML
-      .replace(/\{\{TITLE\}\}/g, title)
-      .replace(/\{\{PROMPT\}\}/g, userPrompt);
+    const { templateId, userPrompt } = body;
+    
+    console.log('生成游戏请求:', { templateId, userPrompt: userPrompt?.slice(0, 50) });
+    
+    // 检查是否配置了 AI API Key
+    const hasApiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY;
+    
+    let game;
+    
+    if (hasApiKey) {
+      try {
+        const { generateGameWithAI } = await import('../services/ai');
+        game = await generateGameWithAI({ templateId, userPrompt, ageRange: [3, 10] });
+        console.log('AI 游戏生成成功');
+      } catch (aiError) {
+        console.warn('AI 生成失败，使用 Mock 兜底:', aiError);
+        game = generateMockGame(userPrompt, templateId);
+      }
+    } else {
+      console.log('未配置 API Key，使用 Mock 生成');
+      game = generateMockGame(userPrompt, templateId);
+    }
 
     return c.json({
       success: true,
-      data: { gameHtml, title },
+      data: { gameHtml: game.html, title: game.title },
     } as GenerateResponse);
   } catch (e) {
-    console.error(e);
+    console.error('生成失败:', e);
     return c.json(
       {
         success: false,
@@ -113,12 +150,5 @@ generateRoute.post("/", async (c) => {
     );
   }
 });
-
-function generateTitle(prompt: string): string {
-  const shortPrompt = prompt.length > 20 ? prompt.slice(0, 20) + "..." : prompt;
-  const suffixes = ["小游戏", "魔法屋", "乐园", "世界", "冒险记"];
-  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
-  return `${shortPrompt}的${suffix}`;
-}
 
 export default generateRoute;

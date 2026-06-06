@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { handle } from '@hono/node-server/vercel';
 
-// 简单的Mock游戏生成器
+// 简单的 Mock 游戏生成器（兜底方案）
 function generateMockGame(prompt: string, templateId?: string) {
   const games = [
     {
@@ -119,7 +119,27 @@ app.post('/', async (c) => {
     const body = await c.req.json();
     const { templateId, userPrompt } = body;
     
-    const game = generateMockGame(userPrompt, templateId);
+    console.log('生成游戏请求:', { templateId, userPrompt: userPrompt.slice(0, 50) });
+    
+    // 检查是否配置了 AI API Key
+    const hasApiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY;
+    
+    let game;
+    
+    if (hasApiKey) {
+      try {
+        // 动态导入 AI 服务
+        const { generateGameWithAI } = await import('../server/src/services/ai');
+        game = await generateGameWithAI({ templateId, userPrompt, ageRange: [3, 10] });
+        console.log('AI 游戏生成成功');
+      } catch (aiError) {
+        console.warn('AI 生成失败，使用 Mock 兜底:', aiError);
+        game = generateMockGame(userPrompt, templateId);
+      }
+    } else {
+      console.log('未配置 API Key，使用 Mock 生成');
+      game = generateMockGame(userPrompt, templateId);
+    }
     
     return c.json({
       success: true,
@@ -129,10 +149,10 @@ app.post('/', async (c) => {
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error('生成失败:', error);
     return c.json({
       success: false,
-      message: "生成失败"
+      message: "生成失败，请稍后再试"
     }, 500);
   }
 });
