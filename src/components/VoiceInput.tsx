@@ -27,10 +27,32 @@ export function VoiceInput({ value, onChange }: VoiceInputProps) {
     }
   }, [isRecording, transcript, onChange, resetTranscript]);
 
-  // 如果不支持语音识别，显示纯文本输入框
+  // 调试信息
+  React.useEffect(() => {
+    console.log('🎤 VoiceInput: isSupported =', isSupported);
+    console.log('🎤 VoiceInput: window.SpeechRecognition =', typeof window !== 'undefined' && (window as any).SpeechRecognition);
+    console.log('🎤 VoiceInput: window.webkitSpeechRecognition =', typeof window !== 'undefined' && (window as any).webkitSpeechRecognition);
+  }, [isSupported]);
+
+  // 如果不支持语音识别，仍然显示界面，但给出提示
   if (!isSupported) {
     return (
       <div className="voice-input-container">
+        {/* 麦克风按钮（禁用状态） */}
+        <div
+          className="mic-button"
+          style={{ opacity: 0.5, cursor: 'not-allowed' }}
+          title="您的浏览器不支持语音识别"
+        >
+          <span className="mic-icon">🎤</span>
+        </div>
+
+        {/* 不支持提示 */}
+        <div className="error-text">
+          ⚠️ 您的浏览器不支持语音识别，请使用 Chrome/Edge 浏览器
+        </div>
+
+        {/* 文本输入框 */}
         <textarea
           className="text-input-large"
           placeholder="在这里输入你的游戏创意..."
