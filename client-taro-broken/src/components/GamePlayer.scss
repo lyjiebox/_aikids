@@ -1,0 +1,34 @@
+.gameplayer-wrapper {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  background: #2d3436;
+  z-index: 999;
+}
+
+.gameplayer-iframe-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.gameplayer-iframe {
+  border: none;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.gameplayer-fallback {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+}

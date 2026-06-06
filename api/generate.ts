@@ -122,7 +122,7 @@ app.post('/', async (c) => {
     console.log('生成游戏请求:', { templateId, userPrompt: userPrompt.slice(0, 50) });
     
     // 检查是否配置了 AI API Key
-    const hasApiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY;
+    const hasApiKey = process.env.VOLCENGINE_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY;
     
     let game;
     

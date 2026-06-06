@@ -1,0 +1,146 @@
+.create-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #74b9ff 0%, #a29bfe 100%);
+  padding: 20px;
+}
+
+.create-page.generating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+
+.back-btn {
+  font-size: 36px;
+  color: #fff;
+  font-weight: bold;
+}
+
+.title {
+  font-size: 24px;
+  color: #fff;
+  font-weight: bold;
+}
+
+.spacer {
+  width: 40px;
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0.5;
+}
+
+.step.active {
+  opacity: 1;
+}
+
+.step-num {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  color: #6c5ce7;
+  font-size: 20px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+.step-text {
+  font-size: 14px;
+  color: #fff;
+}
+
+.step-line {
+  width: 60px;
+  height: 3px;
+  background: rgba(255,255,255,0.4);
+  margin: 0 10px;
+  margin-bottom: 20px;
+}
+
+.content {
+  background: #fff;
+  border-radius: 24px;
+  padding: 24px;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #2d3436;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.text-input-wrapper {
+  margin-bottom: 16px;
+}
+
+.text-input {
+  width: 100%;
+  height: 120px;
+  border: 2px solid #e0e0e0;
+  border-radius: 16px;
+  padding: 16px;
+  font-size: 18px;
+}
+
+.input-preview {
+  background: #f8f9fa;
+  border-radius: 16px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.preview-label {
+  font-size: 14px;
+  color: #636e72;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.preview-text {
+  font-size: 18px;
+  color: #2d3436;
+  font-weight: 500;
+}
+
+.generate-btn {
+  width: 100%;
+  height: 60px;
+  font-size: 20px;
+  border-radius: 30px;
+  background: #6c5ce7;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  margin-top: 20px;
+}
+
+.generate-btn[disabled] {
+  background: #b2bec3;
+}

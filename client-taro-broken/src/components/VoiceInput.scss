@@ -1,0 +1,48 @@
+.voiceinput-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+}
+
+.voiceinput-btn {
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fd79a8, #e84393);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 30px rgba(232, 67, 147, 0.4);
+  transition: transform 0.1s;
+}
+
+.voiceinput-btn:active,
+.voiceinput-btn-listening {
+  transform: scale(0.94);
+}
+
+.voiceinput-btn-listening {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 10px 30px rgba(232, 67, 147, 0.4);
+  }
+  50% {
+    box-shadow: 0 10px 50px rgba(232, 67, 147, 0.7);
+  }
+}
+
+.voiceinput-icon {
+  font-size: 60px;
+}
+
+.voiceinput-tip {
+  margin-top: 16px;
+  font-size: 18px;
+  color: #636e72;
+  font-weight: bold;
+}

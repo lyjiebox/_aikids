@@ -1,6 +1,6 @@
 /**
  * AI 游戏生成服务
- * 使用 Claude API / OpenAI API 生成 HTML5 儿童游戏
+ * 支持火山引擎 Agent Plan / Claude / OpenAI
  */
 
 const SYSTEM_PROMPT = `你是一个专为儿童设计游戏的 AI 游戏工程师。
@@ -57,14 +57,9 @@ export interface GameGenerationRequest {
 
 /**
  * 调用 AI API 生成游戏
+ * 优先级：火山引擎 > Claude > OpenAI
  */
 export async function generateGameWithAI(req: GameGenerationRequest): Promise<GameGenerationResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error("缺少 API Key，请配置环境变量 ANTHROPIC_API_KEY 或 OPENAI_API_KEY");
-  }
-
   // 构建用户 Prompt
   let userPrompt = req.userPrompt;
   if (req.templateId) {
@@ -80,17 +75,63 @@ export async function generateGameWithAI(req: GameGenerationRequest): Promise<Ga
     }
   }
 
-  // 优先尝试 Claude (Anthropic)
+  // 1. 火山引擎 Agent Plan（OpenAI 兼容接口）
+  if (process.env.VOLCENGINE_API_KEY && process.env.VOLCENGINE_ENDPOINT_ID) {
+    return await callVolcengine(
+      process.env.VOLCENGINE_API_KEY,
+      process.env.VOLCENGINE_ENDPOINT_ID,
+      userPrompt
+    );
+  }
+
+  // 2. Claude (Anthropic)
   if (process.env.ANTHROPIC_API_KEY) {
-    return await callAnthropic(apiKey, userPrompt);
+    return await callAnthropic(process.env.ANTHROPIC_API_KEY, userPrompt);
   }
 
-  // 其次尝试 OpenAI
+  // 3. OpenAI
   if (process.env.OPENAI_API_KEY) {
-    return await callOpenAI(apiKey, userPrompt);
+    return await callOpenAI(process.env.OPENAI_API_KEY, userPrompt);
   }
 
-  throw new Error("未配置有效的 AI API Key");
+  throw new Error("未配置有效的 AI API Key，请配置 VOLCENGINE_API_KEY、ANTHROPIC_API_KEY 或 OPENAI_API_KEY");
+}
+
+/**
+ * 调用火山引擎 Agent Plan（OpenAI 兼容接口）
+ */
+async function callVolcengine(apiKey: string, endpointId: string, userPrompt: string): Promise<GameGenerationResult> {
+  const response = await fetch(`https://ark.cn-beijing.volces.com/api/v3/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: endpointId,
+      messages: [
+        {
+          role: 'system',
+          content: SYSTEM_PROMPT
+        },
+        {
+          role: 'user',
+          content: userPrompt
+        }
+      ],
+      max_tokens: 4000,
+      temperature: 0.7
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`火山引擎 API 失败 (${response.status}): ${errText}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices[0].message.content;
+  return parseGameOutput(text);
 }
 
 /**

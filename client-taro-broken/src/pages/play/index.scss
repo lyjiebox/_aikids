@@ -1,0 +1,94 @@
+.play-page {
+  min-height: 100vh;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+.play-page.not-found {
+  background: linear-gradient(135deg, #74b9ff 0%, #a29bfe 100%);
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.not-found-text {
+  font-size: 24px;
+  color: #fff;
+  margin-bottom: 30px;
+}
+
+.top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+}
+
+.back-btn {
+  font-size: 28px;
+  color: #fff;
+  font-weight: bold;
+}
+
+.game-title {
+  font-size: 18px;
+  color: #fff;
+  font-weight: bold;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spacer {
+  width: 30px;
+}
+
+.bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+}
+
+.action-btn {
+  flex: 1;
+  height: 50px;
+  font-size: 16px;
+  border-radius: 25px;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  backdrop-filter: blur(4px);
+}
+
+.action-btn.restart {
+  background: rgba(108,92,231,0.8);
+}
+
+.action-btn.save {
+  background: rgba(46,213,115,0.8);
+}
+
+.back-btn {
+  width: 200px;
+  height: 50px;
+  border-radius: 25px;
+  background: #fff;
+  color: #6c5ce7;
+  border: none;
+  font-weight: bold;
+}

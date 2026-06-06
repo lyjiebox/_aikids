@@ -1,0 +1,39 @@
+.gamecard-wrapper {
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.gamecard-thumb {
+  height: 120px;
+  background: linear-gradient(135deg, #74b9ff, #a29bfe);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gamecard-emoji {
+  font-size: 60px;
+}
+
+.gamecard-info {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gamecard-title {
+  font-size: 16px;
+  color: #2d3436;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+.gamecard-meta {
+  font-size: 13px;
+  color: #636e72;
+}

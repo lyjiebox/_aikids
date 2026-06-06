@@ -1,0 +1,117 @@
+.gallery-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #74b9ff 0%, #a29bfe 100%);
+  padding: 20px;
+}
+
+.gallery-page.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.count {
+  font-size: 18px;
+  color: rgba(255,255,255,0.8);
+}
+
+.works-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.empty-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+}
+
+.empty-text {
+  font-size: 24px;
+  color: #fff;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.empty-hint {
+  font-size: 18px;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 40px;
+}
+
+.go-create-btn {
+  width: 200px;
+  height: 50px;
+  border-radius: 25px;
+  background: #fff;
+  color: #6c5ce7;
+  border: none;
+  font-weight: bold;
+}
+
+.delete-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.delete-modal {
+  background: #fff;
+  border-radius: 24px;
+  padding: 32px 24px;
+  width: 300px;
+}
+
+.modal-title {
+  font-size: 20px;
+  color: #2d3436;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 24px;
+  display: block;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.modal-btn {
+  flex: 1;
+  height: 48px;
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+}
+
+.modal-btn.cancel {
+  background: #dfe6e9;
+  color: #2d3436;
+}
+
+.modal-btn.confirm {
+  background: #d63031;
+  color: #fff;
+}
