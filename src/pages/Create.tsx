@@ -36,31 +36,37 @@ function Create() {
     setIsGenerating(true);
     setEngine('pending'); // 等待中状态
     
-    const res = await generateGame({
-      templateId: selectedTemplate,
-      userPrompt: userInput,
-    });
-
-    // 记录引擎类型
-    const finalEngine = res.data?.engine || 'mock';
-    setEngine(finalEngine);
-
-    if (res.success && res.data) {
-      const work = {
-        id: Date.now().toString(),
-        title: res.data.title,
+    try {
+      const res = await generateGame({
         templateId: selectedTemplate,
         userPrompt: userInput,
-        gameHtml: res.data.gameHtml,
-        engine: finalEngine,
-        createdAt: Date.now(),
-        playCount: 0,
-      };
-      addWork(work);
-      // 短暂延迟让用户看到 AI 引擎标识
-      setTimeout(() => navigate(`/play/${work.id}`), 1200);
-    } else {
-      alert(res.message || '生成失败，请重试！');
+      });
+
+      // 记录引擎类型
+      const finalEngine = res.data?.engine || 'mock';
+      setEngine(finalEngine);
+
+      if (res.success && res.data) {
+        const work = {
+          id: Date.now().toString(),
+          title: res.data.title,
+          templateId: selectedTemplate,
+          userPrompt: userInput,
+          gameHtml: res.data.gameHtml,
+          engine: finalEngine,
+          createdAt: Date.now(),
+          playCount: 0,
+        };
+        addWork(work);
+        // 短暂延迟让用户看到 AI 引擎标识
+        setTimeout(() => navigate(`/play/${work.id}`), 1200);
+      } else {
+        alert(res.message || '生成失败，请重试！');
+        setStep(2);
+      }
+    } catch (err) {
+      console.error('生成失败:', err);
+      alert('网络请求失败，请检查网络后重试！');
       setStep(2);
     }
     setIsGenerating(false);
