@@ -17,6 +17,7 @@ function Create() {
   const [userInput, setUserInput] = useState('');
   const [step, setStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [engine, setEngine] = useState(null); // 'volcengine' | 'mock'
 
   useEffect(() => {
     const tpl = searchParams.get('templateId');
@@ -39,6 +40,9 @@ function Create() {
       userPrompt: userInput,
     });
 
+    // 记录引擎类型
+    setEngine(res.data?.engine || 'mock');
+
     if (res.success && res.data) {
       const work = {
         id: Date.now().toString(),
@@ -46,11 +50,13 @@ function Create() {
         templateId: selectedTemplate,
         userPrompt: userInput,
         gameHtml: res.data.gameHtml,
+        engine: res.data.engine || 'mock',
         createdAt: Date.now(),
         playCount: 0,
       };
       addWork(work);
-      navigate(`/play/${work.id}`);
+      // 短暂延迟让用户看到 AI 引擎标识
+      setTimeout(() => navigate(`/play/${work.id}`), 800);
     } else {
       alert(res.message || '生成失败，请重试！');
       setStep(2);
@@ -59,9 +65,17 @@ function Create() {
   };
 
   if (isGenerating || step === 3) {
+    const loadingText = engine === 'volcengine'
+      ? '🔥 AI 正在创作你的游戏...'
+      : '🎨 正在生成游戏...';
     return (
       <div className="create-page">
-        <LoadingAnimation text="正在生成游戏..." />
+        <LoadingAnimation text={loadingText} />
+        {engine && (
+          <div className="engine-badge">
+            {engine === 'volcengine' ? '🤖 火山引擎 AI' : '📦 本地模板'}
+          </div>
+        )}
       </div>
     );
   }
