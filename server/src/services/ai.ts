@@ -1,6 +1,6 @@
 /**
  * AI 游戏生成服务
- * 支持火山引擎 Agent Plan / Claude / OpenAI
+ * 支持火山引擎 Agent Plan（Responses API）/ Claude / OpenAI
  */
 
 const SYSTEM_PROMPT = `你是一个专为儿童设计游戏的 AI 游戏工程师。
@@ -75,11 +75,11 @@ export async function generateGameWithAI(req: GameGenerationRequest): Promise<Ga
     }
   }
 
-  // 1. 火山引擎 Agent Plan（OpenAI 兼容接口）
-  if (process.env.VOLCENGINE_API_KEY && process.env.VOLCENGINE_ENDPOINT_ID) {
-    return await callVolcengine(
+  // 1. 火山引擎 Agent Plan（Responses API）
+  if (process.env.VOLCENGINE_API_KEY) {
+    return await callVolcengineResponses(
       process.env.VOLCENGINE_API_KEY,
-      process.env.VOLCENGINE_ENDPOINT_ID,
+      process.env.VOLCENGINE_MODEL || 'doubao-seed-1-8-251228',
       userPrompt
     );
   }
@@ -98,39 +98,52 @@ export async function generateGameWithAI(req: GameGenerationRequest): Promise<Ga
 }
 
 /**
- * 调用火山引擎 Agent Plan（OpenAI 兼容接口）
+ * 调用火山引擎 Agent Plan（Responses API）
+ * 使用 Agent Plan 订阅的预付费额度
  */
-async function callVolcengine(apiKey: string, endpointId: string, userPrompt: string): Promise<GameGenerationResult> {
-  const response = await fetch(`https://ark.cn-beijing.volces.com/api/v3/chat/completions`, {
+async function callVolcengineResponses(apiKey: string, model: string, userPrompt: string): Promise<GameGenerationResult> {
+  const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: endpointId,
-      messages: [
+      model,
+      input: [
         {
           role: 'system',
-          content: SYSTEM_PROMPT
+          content: [{ type: 'input_text', text: SYSTEM_PROMPT }]
         },
         {
           role: 'user',
-          content: userPrompt
+          content: [{ type: 'input_text', text: userPrompt }]
         }
       ],
-      max_tokens: 4000,
-      temperature: 0.7
+      max_output_tokens: 4096
     })
   });
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`火山引擎 API 失败 (${response.status}): ${errText}`);
+    throw new Error(`火山引擎 Responses API 失败 (${response.status}): ${errText}`);
   }
 
   const data = await response.json();
-  const text = data.choices[0].message.content;
+
+  // Responses API 格式：output[] 中找 assistant 消息
+  const assistantOutput = data.output?.find(
+    (item: any) => item.type === 'message' && item.role === 'assistant'
+  );
+  if (!assistantOutput) {
+    throw new Error('Responses API 未返回 assistant 消息');
+  }
+
+  const text = assistantOutput.content?.find((c: any) => c.type === 'output_text')?.text;
+  if (!text) {
+    throw new Error('Responses API 未返回文本内容');
+  }
+
   return parseGameOutput(text);
 }
 
