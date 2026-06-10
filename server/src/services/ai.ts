@@ -1,8 +1,26 @@
 /**
- * AI 游戏生成服务
- * 支持火山引擎 Agent Plan（Responses API）/ Claude / OpenAI
+ * ============================================================
+ * AI 游戏生成服务（本地开发用）
+ * ============================================================
+ * 
+ * 注意：Vercel 部署使用的是 api/generate.ts（内联版本），
+ * 这个文件仅用于本地开发（npm run dev）时 server/ 目录下的后端服务。
+ * 
+ * 支持的 AI 引擎（按优先级）：
+ * 1. 火山引擎 Agent Plan（Responses API）— 消耗预付费额度
+ * 2. Anthropic Claude
+ * 3. OpenAI
+ * 
+ * 环境变量：
+ *   VOLCENGINE_API_KEY — 火山引擎 API Key
+ *   VOLCENGINE_MODEL    — 模型名（默认 doubao-seed-1-8-251228）
+ *   ANTHROPIC_API_KEY   — Anthropic API Key
+ *   OPENAI_API_KEY      — OpenAI API Key
  */
 
+// ============================================================
+// System Prompt — 告诉 AI 如何生成儿童游戏
+// ============================================================
 const SYSTEM_PROMPT = `你是一个专为儿童设计游戏的 AI 游戏工程师。
 你的任务是根据用户的描述，生成一个完整、可运行的 HTML5 游戏。
 
@@ -44,38 +62,48 @@ const SYSTEM_PROMPT = `你是一个专为儿童设计游戏的 AI 游戏工程�
 
 现在，根据用户的描述生成游戏吧！`;
 
+// ============================================================
+// 类型定义
+// ============================================================
+
+/** AI 生成的游戏结果 */
 export interface GameGenerationResult {
   title: string;
   html: string;
 }
 
+/** 游戏生成请求参数 */
 export interface GameGenerationRequest {
-  templateId?: string;
-  userPrompt: string;
-  ageRange?: [number, number];
+  templateId?: string;          // 模板 ID（可选）
+  userPrompt: string;           // 用户语音/文字输入
+  ageRange?: [number, number];  // 目标年龄段
 }
+
+// ============================================================
+// 模板提示前缀
+// ============================================================
+const TEMPLATE_HINTS: Record<string, string> = {
+  'animal': '这是一个关于动物的游戏',
+  'vehicle': '这是一个关于交通工具/汽车的游戏',
+  'princess': '这是一个关于公主/魔法的游戏',
+  'dinosaur': '这是一个关于恐龙的游戏',
+  'space': '这是一个关于太空的游戏'
+};
 
 /**
  * 调用 AI API 生成游戏
- * 优先级：火山引擎 > Claude > OpenAI
+ * 
+ * 优先级：火山引擎 Agent Plan > Claude > OpenAI
+ * 全部不可用时抛出异常
  */
 export async function generateGameWithAI(req: GameGenerationRequest): Promise<GameGenerationResult> {
-  // 构建用户 Prompt
+  // 拼接模板提示前缀
   let userPrompt = req.userPrompt;
-  if (req.templateId) {
-    const templateHints: Record<string, string> = {
-      'animal': '这是一个关于动物的游戏',
-      'vehicle': '这是一个关于交通工具/汽车的游戏',
-      'princess': '这是一个关于公主/魔法的游戏',
-      'dinosaur': '这是一个关于恐龙的游戏',
-      'space': '这是一个关于太空的游戏'
-    };
-    if (templateHints[req.templateId]) {
-      userPrompt = templateHints[req.templateId] + '。' + userPrompt;
-    }
+  if (req.templateId && TEMPLATE_HINTS[req.templateId]) {
+    userPrompt = TEMPLATE_HINTS[req.templateId] + '。' + userPrompt;
   }
 
-  // 1. 火山引擎 Agent Plan（Responses API）
+  // 1. 火山引擎 Agent Plan（Responses API）— 优先使用
   if (process.env.VOLCENGINE_API_KEY) {
     return await callVolcengineResponses(
       process.env.VOLCENGINE_API_KEY,
@@ -84,12 +112,12 @@ export async function generateGameWithAI(req: GameGenerationRequest): Promise<Ga
     );
   }
 
-  // 2. Claude (Anthropic)
+  // 2. Anthropic Claude — 备选
   if (process.env.ANTHROPIC_API_KEY) {
     return await callAnthropic(process.env.ANTHROPIC_API_KEY, userPrompt);
   }
 
-  // 3. OpenAI
+  // 3. OpenAI — 最后备选
   if (process.env.OPENAI_API_KEY) {
     return await callOpenAI(process.env.OPENAI_API_KEY, userPrompt);
   }
@@ -99,7 +127,9 @@ export async function generateGameWithAI(req: GameGenerationRequest): Promise<Ga
 
 /**
  * 调用火山引擎 Agent Plan（Responses API）
- * 使用 Agent Plan 订阅的预付费额度
+ * 
+ * 使用 Agent Plan 订阅的预付费额度，不额外计费。
+ * API 文档：https://www.volcengine.com/docs/82379
  */
 async function callVolcengineResponses(apiKey: string, model: string, userPrompt: string): Promise<GameGenerationResult> {
   const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
@@ -111,14 +141,8 @@ async function callVolcengineResponses(apiKey: string, model: string, userPrompt
     body: JSON.stringify({
       model,
       input: [
-        {
-          role: 'system',
-          content: [{ type: 'input_text', text: SYSTEM_PROMPT }]
-        },
-        {
-          role: 'user',
-          content: [{ type: 'input_text', text: userPrompt }]
-        }
+        { role: 'system', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
+        { role: 'user', content: [{ type: 'input_text', text: userPrompt }] }
       ],
       max_output_tokens: 4096
     })
@@ -131,18 +155,14 @@ async function callVolcengineResponses(apiKey: string, model: string, userPrompt
 
   const data = await response.json();
 
-  // Responses API 格式：output[] 中找 assistant 消息
+  // Responses API 响应格式：output[] 中包含 reasoning + message
   const assistantOutput = data.output?.find(
     (item: any) => item.type === 'message' && item.role === 'assistant'
   );
-  if (!assistantOutput) {
-    throw new Error('Responses API 未返回 assistant 消息');
-  }
+  if (!assistantOutput) throw new Error('Responses API 未返回 assistant 消息');
 
   const text = assistantOutput.content?.find((c: any) => c.type === 'output_text')?.text;
-  if (!text) {
-    throw new Error('Responses API 未返回文本内容');
-  }
+  if (!text) throw new Error('Responses API 未返回文本内容');
 
   return parseGameOutput(text);
 }
@@ -162,17 +182,12 @@ async function callAnthropic(apiKey: string, userPrompt: string): Promise<GameGe
       model: 'claude-3-haiku-20240307',
       max_tokens: 4000,
       messages: [
-        {
-          role: 'user',
-          content: `${SYSTEM_PROMPT}\n\n用户描述：${userPrompt}`
-        }
+        { role: 'user', content: `${SYSTEM_PROMPT}\n\n用户描述：${userPrompt}` }
       ]
     })
   });
 
-  if (!response.ok) {
-    throw new Error(`Anthropic API 失败: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`Anthropic API 失败: ${response.status}`);
 
   const data = await response.json();
   const text = data.content[0].text;
@@ -192,23 +207,15 @@ async function callOpenAI(apiKey: string, userPrompt: string): Promise<GameGener
     body: JSON.stringify({
       model: 'gpt-3.5-turbo',
       messages: [
-        {
-          role: 'system',
-          content: SYSTEM_PROMPT
-        },
-        {
-          role: 'user',
-          content: userPrompt
-        }
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt }
       ],
       max_tokens: 4000,
       temperature: 0.7
     })
   });
 
-  if (!response.ok) {
-    throw new Error(`OpenAI API 失败: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`OpenAI API 失败: ${response.status}`);
 
   const data = await response.json();
   const text = data.choices[0].message.content;
@@ -216,40 +223,39 @@ async function callOpenAI(apiKey: string, userPrompt: string): Promise<GameGener
 }
 
 /**
- * 解析 AI 输出，提取 JSON
+ * 解析 AI 输出的文本，提取 JSON 游戏数据
+ * 
+ * 支持三种格式：
+ * 1. 纯 JSON: {"title":"xxx","html":"..."}
+ * 2. Markdown 代码块: ```json { ... } ```
+ * 3. 普通代码块: ``` { ... } ```
+ * 
+ * 全部失败时返回默认游戏（兜底）
  */
 function parseGameOutput(text: string): GameGenerationResult {
-  // 尝试直接解析 JSON
-  try {
-    return JSON.parse(text) as GameGenerationResult;
-  } catch {
-    // 尝试提取 ```json ... ``` 包裹的内容
-    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[1]) as GameGenerationResult;
-      } catch {
-        // 继续尝试其他方式
-      }
-    }
-    
-    // 尝试提取 ``` ... ``` 包裹的内容
-    const codeMatch = text.match(/```\s*([\s\S]*?)\s*```/);
-    if (codeMatch) {
-      try {
-        return JSON.parse(codeMatch[1]) as GameGenerationResult;
-      } catch {
-        // 继续尝试其他方式
-      }
-    }
+  // 尝试 1：直接解析 JSON
+  try { return JSON.parse(text) as GameGenerationResult; } catch {}
 
-    // 如果找不到有效 JSON，构建一个简单的默认游戏
-    return buildDefaultGame(text);
+  // 尝试 2：提取 ```json ... ```
+  const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+  if (jsonMatch) {
+    try { return JSON.parse(jsonMatch[1]) as GameGenerationResult; } catch {}
   }
+  
+  // 尝试 3：提取 ``` ... ```
+  const codeMatch = text.match(/```\s*([\s\S]*?)\s*```/);
+  if (codeMatch) {
+    try { return JSON.parse(codeMatch[1]) as GameGenerationResult; } catch {}
+  }
+
+  // 全部失败 → 返回默认游戏
+  return buildDefaultGame(text);
 }
 
 /**
- * 构建默认游戏（兜底方案）
+ * 构建默认游戏（最终兜底方案）
+ * 
+ * 当 AI 返回的内容无法解析时，生成一个简单的点击 emoji 游戏。
  */
 function buildDefaultGame(description: string): GameGenerationResult {
   const title = description.slice(0, 8) || "我的小游戏";
@@ -269,21 +275,11 @@ function buildDefaultGame(description: string): GameGenerationResult {
       display:flex; align-items:center; justify-content:center; 
       min-height:100vh; font-family:system-ui, sans-serif;
     }
-    .game {
-      width:100%; max-width:500px; text-align:center; padding:20px;
-    }
-    .emoji {
-      font-size:100px; cursor:pointer; display:inline-block;
-      transition: transform 0.1s;
-    }
-    .emoji:active { transform: translateY(-20px) scale(1.1); }
-    .score {
-      font-size:30px; color:#fff; font-weight:bold; margin-bottom:20px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    .title {
-      font-size:24px; color:#333; margin-bottom:20px;
-    }
+    .game { width:100%; max-width:500px; text-align:center; padding:20px; }
+    .emoji { font-size:100px; cursor:pointer; display:inline-block; transition:transform 0.1s; }
+    .emoji:active { transform:translateY(-20px) scale(1.1); }
+    .score { font-size:30px; color:#fff; font-weight:bold; margin-bottom:20px; text-shadow:0 2px 4px rgba(0,0,0,0.3); }
+    .title { font-size:24px; color:#333; margin-bottom:20px; }
   </style>
 </head>
 <body>
@@ -293,18 +289,9 @@ function buildDefaultGame(description: string): GameGenerationResult {
     <div class="emoji" id="target">🎮</div>
   </div>
   <script>
-    let score = 0;
-    const target = document.getElementById('target');
-    const scoreEl = document.getElementById('score');
-    const emojis = ['🎮', '🎨', '🎯', '🎪', '🎭', '🎬', '🎤', '🎧', '🎸', '🎹'];
-    
-    target.addEventListener('click', () => {
-      score++;
-      scoreEl.textContent = score;
-      target.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-      target.style.transform = 'scale(0.8)';
-      setTimeout(() => target.style.transform = '', 100);
-    });
+    let score=0;const t=document.getElementById('target'),s=document.getElementById('score');
+    const e=['🎮','🎨','🎯','🎪','🎭','🎬','🎤','🎧','🎸','🎹'];
+    t.addEventListener('click',()=>{score++;s.textContent=score;t.textContent=e[Math.floor(Math.random()*e.length)];t.style.transform='scale(0.8)';setTimeout(()=>t.style.transform='',100)});
   </script>
 </body>
 </html>`

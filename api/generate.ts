@@ -1,9 +1,32 @@
+/**
+ * ============================================================
+ * Vercel Serverless Function: POST /api/generate
+ * ============================================================
+ * 
+ * 这是部署在 Vercel 上的后端 API，负责：
+ * 1. 接收前端的游戏生成请求（模板ID + 用户语音/文字输入）
+ * 2. 调用火山引擎 Agent Plan Responses API 生成 HTML5 儿童游戏
+ * 3. AI 调用失败时降级到本地 Mock 游戏模板
+ * 4. 返回游戏 HTML 代码 + 引擎标识（volcengine/mock）
+ * 
+ * 依赖的环境变量（在 Vercel Settings 中配置）：
+ *   VOLCENGINE_API_KEY — 火山引擎 Agent Plan 订阅的 API Key
+ *   VOLCENGINE_MODEL    — 模型名，默认 doubao-seed-1-8-251228
+ * 
+ * 超时配置：vercel.json 中 maxDuration 设为 60 秒
+ * （火山引擎生成游戏通常需要 15-30 秒）
+ */
 import { Hono } from 'hono';
 import { handle } from '@hono/node-server/vercel';
 
 // ============================================================
-// 火山引擎 Agent Plan Responses API 调用
+// AI System Prompt — 告诉 AI 怎么生成儿童游戏
 // ============================================================
+// 这段 Prompt 是整个项目的核心，定义了 AI 生成游戏的规则：
+// - 面向 3-10 岁儿童
+// - 单文件 HTML（内联 CSS + JS）
+// - 安全限制（禁止 iframe/form/eval 等）
+// - 输出 JSON 格式 { title, html }
 
 const SYSTEM_PROMPT = `你是一个专为儿童设计游戏的 AI 游戏工程师。
 你的任务是根据用户的描述，生成一个完整、可运行的 HTML5 游戏。
@@ -39,12 +62,21 @@ const SYSTEM_PROMPT = `你是一个专为儿童设计游戏的 AI 游戏工程�
 现在，根据用户的描述生成游戏吧！`;
 
 /**
- * 调用火山引擎 Agent Plan Responses API
+ * 调用火山引擎 Agent Plan Responses API 生成游戏
+ * 
+ * 这是核心 AI 调用函数，消耗你订阅的 Agent Plan 预付费额度。
+ * 
+ * @param userPrompt 用户的语音/文字输入（已拼接模板提示前缀）
+ * @returns { title: 游戏标题, html: 完整 HTML 代码 }
+ * 
+ * API 文档：https://www.volcengine.com/docs/82379（Responses API）
  */
 async function callVolcengineAI(userPrompt: string): Promise<{ title: string; html: string }> {
+  // 从环境变量读取 API Key 和模型名
   const apiKey = process.env.VOLCENGINE_API_KEY;
   const model = process.env.VOLCENGINE_MODEL || 'doubao-seed-1-8-251228';
 
+  // 调用火山引擎 Responses API（注意：不是 Chat Completions API）
   const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
     method: 'POST',
     headers: {
@@ -61,6 +93,7 @@ async function callVolcengineAI(userPrompt: string): Promise<{ title: string; ht
     })
   });
 
+  // 检查 HTTP 状态码
   if (!response.ok) {
     const errText = await response.text();
     throw new Error(`火山引擎 API 失败 (${response.status}): ${errText}`);
@@ -68,18 +101,32 @@ async function callVolcengineAI(userPrompt: string): Promise<{ title: string; ht
 
   const data = await response.json();
 
-  // 解析 Responses API 格式
+  // Responses API 的响应格式和 Chat Completions 不同：
+  // output[] 是一个数组，包含 reasoning（思考过程）和 message（回复）
+  // 我们需要找到 role=assistant 的 message
   const assistantOutput = data.output?.find(
     (item: any) => item.type === 'message' && item.role === 'assistant'
   );
   if (!assistantOutput) throw new Error('API 未返回 assistant 消息');
 
+  // 从 assistant 消息中提取文本内容
   const text = assistantOutput.content?.find((c: any) => c.type === 'output_text')?.text;
   if (!text) throw new Error('API 未返回文本内容');
 
+  // 解析 AI 返回的 JSON（AI 应该返回 { title, html }）
   return parseGameOutput(text);
 }
 
+/**
+ * 解析 AI 输出的文本，提取 JSON 游戏数据
+ * 
+ * AI 可能返回多种格式：
+ * 1. 纯 JSON: {"title":"xxx","html":"..."}
+ * 2. Markdown 代码块: ```json { ... } ```
+ * 3. 普通代码块: ``` { ... } ```
+ * 
+ * @throws 如果所有解析方式都失败
+ */
 function parseGameOutput(text: string): { title: string; html: string } {
   // 直接解析 JSON
   try { return JSON.parse(text); } catch {}
@@ -100,10 +147,17 @@ function parseGameOutput(text: string): { title: string; html: string } {
 }
 
 // ============================================================
-// Mock 兜底
+// Mock 兜底 — AI 不可用时的本地备用游戏
 // ============================================================
+// 当火山引擎 API 调用失败或未配置 API Key 时，
+// 返回这两个预设的简单游戏，确保用户始终能得到一个可玩的游戏。
 
-function generateMockGame(prompt: string, templateId?: string) {
+/**
+ * 生成本地 Mock 游戏
+ * @param _prompt 用户输入（当前未使用，仅保留接口一致性）
+ * @param templateId 模板 ID，匹配对应主题的预设游戏
+ */
+function generateMockGame(_prompt: string, templateId?: string) {
   const games = [
     {
       title: "跳跃的小兔子",
@@ -173,23 +227,55 @@ function generateMockGame(prompt: string, templateId?: string) {
     }
   ];
   
-  if (templateId === 'animal') return games[0];
-  if (templateId === 'space') return games[1];
+  // 根据模板 ID 返回对应主题的游戏
+  if (templateId === 'animal') return games[0];  // 动物 → 兔子
+  if (templateId === 'space') return games[1];   // 太空 → 火箭
+  // 没有匹配的模板时随机返回一个
   return games[Math.floor(Math.random() * games.length)];
 }
 
 // ============================================================
-// Hono App
+// 模板提示前缀 — 根据用户选择的模板增强 Prompt
+// ============================================================
+const TEMPLATE_HINTS: Record<string, string> = {
+  'animal': '这是一个关于动物的游戏',
+  'vehicle': '这是一个关于交通工具/汽车的游戏',
+  'princess': '这是一个关于公主/魔法的游戏',
+  'dinosaur': '这是一个关于恐龙的游戏',
+  'space': '这是一个关于太空的游戏'
+};
+
+// ============================================================
+// Hono 路由处理 — 接收前端请求，返回游戏
 // ============================================================
 
 const app = new Hono();
 
+/**
+ * POST /api/generate
+ * 
+ * 请求体：{ templateId?: string, userPrompt: string }
+ * 响应体：{ success: true, data: { title, gameHtml, engine } }
+ * 
+ * 处理流程：
+ * 1. 检查是否配置了 VOLCENGINE_API_KEY
+ * 2. 有 Key → 调用火山引擎 AI 生成
+ * 3. AI 失败 → 降级到 Mock 本地游戏
+ * 4. 无 Key → 直接用 Mock
+ * 5. 返回结果 + engine 标识（前端据此显示不同 UI）
+ */
 app.post('/', async (c) => {
   try {
     const body = await c.req.json();
     const { templateId, userPrompt } = body;
     
     console.log('[generate] 请求:', { templateId, prompt: userPrompt?.slice(0, 50) });
+
+    // 拼接模板提示前缀，让 AI 生成更贴合主题的游戏
+    let finalPrompt = userPrompt;
+    if (templateId && TEMPLATE_HINTS[templateId]) {
+      finalPrompt = TEMPLATE_HINTS[templateId] + '。' + userPrompt;
+    }
 
     let game;
     let engine: 'volcengine' | 'mock' = 'mock';
@@ -198,7 +284,7 @@ app.post('/', async (c) => {
     if (process.env.VOLCENGINE_API_KEY) {
       try {
         console.log('[generate] 调用火山引擎 Responses API...');
-        game = await callVolcengineAI(userPrompt);
+        game = await callVolcengineAI(finalPrompt);
         engine = 'volcengine';
         console.log('[generate] ✅ AI 生成成功:', game.title);
       } catch (aiError: any) {
@@ -210,6 +296,7 @@ app.post('/', async (c) => {
       game = generateMockGame(userPrompt, templateId);
     }
 
+    // 返回结果，engine 字段告诉前端用了哪个引擎
     return c.json({
       success: true,
       data: {

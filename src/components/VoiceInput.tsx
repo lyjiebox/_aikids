@@ -1,25 +1,44 @@
+/**
+ * ============================================================
+ * VoiceInput 组件 — 语音输入 + 文字输入降级
+ * ============================================================
+ * 
+ * 功能：
+ * - 按住麦克风按钮开始录音，松开结束
+ * - 实时显示语音识别中间结果（绿色文字）
+ * - 录音结束后自动填入识别文本
+ * - 支持手动修改识别结果
+ * - 浏览器不支持语音时自动降级为纯文字输入
+ * 
+ * 依赖：
+ * - useSpeechRecognition Hook（Web Speech API）
+ * 
+ * 使用方式：
+ *   <VoiceInput value={text} onChange={setText} />
+ */
+
 import React from 'react';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import './VoiceInput.css';
 
 type VoiceInputProps = {
-  value: string;
-  onChange: (value: string) => void;
+  value: string;           // 当前输入文本（受控组件）
+  onChange: (value: string) => void;  // 文本变更回调
 };
 
 export function VoiceInput({ value, onChange }: VoiceInputProps) {
   const {
-    isRecording,
-    transcript,
-    interimTranscript,
-    isSupported,
-    error,
-    startRecording,
-    stopRecording,
-    resetTranscript,
+    isRecording,         // 是否正在录音
+    transcript,          // 最终识别文本
+    interimTranscript,   // 临时识别文本（实时显示）
+    isSupported,         // 浏览器是否支持语音识别
+    error,               // 错误信息
+    startRecording,      // 开始录音
+    stopRecording,       // 结束录音
+    resetTranscript,     // 重置识别文本
   } = useSpeechRecognition();
 
-  // 录音结束时，更新外部状态
+  // 录音结束时，将识别结果同步到外部状态
   React.useEffect(() => {
     if (!isRecording && transcript) {
       onChange(transcript);
@@ -27,14 +46,9 @@ export function VoiceInput({ value, onChange }: VoiceInputProps) {
     }
   }, [isRecording, transcript, onChange, resetTranscript]);
 
-  // 调试信息
-  React.useEffect(() => {
-    console.log('🎤 VoiceInput: isSupported =', isSupported);
-    console.log('🎤 VoiceInput: window.SpeechRecognition =', typeof window !== 'undefined' && (window as any).SpeechRecognition);
-    console.log('🎤 VoiceInput: window.webkitSpeechRecognition =', typeof window !== 'undefined' && (window as any).webkitSpeechRecognition);
-  }, [isSupported]);
-
-  // 如果不支持语音识别，仍然显示界面，但给出提示
+  // ============================================================
+  // 浏览器不支持语音识别 → 降级为纯文字输入
+  // ============================================================
   if (!isSupported) {
     return (
       <div className="voice-input-container">
@@ -52,7 +66,7 @@ export function VoiceInput({ value, onChange }: VoiceInputProps) {
           ⚠️ 您的浏览器不支持语音识别，请使用 Chrome/Edge 浏览器
         </div>
 
-        {/* 文本输入框 */}
+        {/* 文字输入框（降级方案） */}
         <textarea
           className="text-input-large"
           placeholder="在这里输入你的游戏创意..."
@@ -64,19 +78,23 @@ export function VoiceInput({ value, onChange }: VoiceInputProps) {
     );
   }
 
+  // ============================================================
+  // 正常模式：语音 + 文字双输入
+  // ============================================================
   return (
     <div className="voice-input-container">
-      {/* 麦克风按钮 */}
+      {/* 麦克风按钮：按住说话，松开结束 */}
       <div
         className={`mic-button ${isRecording ? 'recording' : ''}`}
         onMouseDown={startRecording}
         onMouseUp={stopRecording}
-        onMouseLeave={stopRecording}
-        onTouchStart={startRecording}
+        onMouseLeave={stopRecording}     {/* 鼠标移出也停止（防止卡录音） */}
+        onTouchStart={startRecording}     {/* 移动端触摸支持 */}
         onTouchEnd={stopRecording}
       >
         {isRecording ? (
           <>
+            {/* 录音中的脉冲动画 */}
             <div className="mic-animation">
               <div className="mic-pulse"></div>
               <div className="mic-pulse"></div>
@@ -89,7 +107,7 @@ export function VoiceInput({ value, onChange }: VoiceInputProps) {
         )}
       </div>
 
-      {/* 提示文字 */}
+      {/* 状态提示 */}
       <div className="voice-hint">
         {isRecording ? (
           <div className="recording-hint">
@@ -101,7 +119,7 @@ export function VoiceInput({ value, onChange }: VoiceInputProps) {
         )}
       </div>
 
-      {/* 实时文本显示 */}
+      {/* 实时识别文本（绿色，录音中显示） */}
       {interimTranscript && (
         <div className="interim-text">{interimTranscript}</div>
       )}
@@ -109,7 +127,7 @@ export function VoiceInput({ value, onChange }: VoiceInputProps) {
       {/* 错误提示 */}
       {error && <div className="error-text">{error}</div>}
 
-      {/* 已有内容时，显示文本输入框 */}
+      {/* 文字输入框：有内容时显示，可以手动修改识别结果 */}
       {value && (
         <textarea
           className="text-input-large"
@@ -120,20 +138,20 @@ export function VoiceInput({ value, onChange }: VoiceInputProps) {
         />
       )}
 
-      {/* 降级选项：也提供文字输入 */}
-      <div className="text-input-toggle">
-        {!value && (
-          <span className="toggle-hint">或者直接输入文字</span>
-        )}
-      </div>
+      {/* 文字输入框：无内容时也显示，作为语音的替代方案 */}
       {!value && (
-        <textarea
-          className="text-input-large"
-          placeholder="在这里输入你的游戏创意..."
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          rows={3}
-        />
+        <>
+          <div className="text-input-toggle">
+            <span className="toggle-hint">或者直接输入文字</span>
+          </div>
+          <textarea
+            className="text-input-large"
+            placeholder="在这里输入你的游戏创意..."
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            rows={3}
+          />
+        </>
       )}
     </div>
   );
