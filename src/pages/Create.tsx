@@ -17,7 +17,7 @@ function Create() {
   const [userInput, setUserInput] = useState('');
   const [step, setStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [engine, setEngine] = useState(null); // 'volcengine' | 'mock'
+  const [engine, setEngine] = useState(null); // 'volcengine' | 'mock' | null(等待中)
 
   useEffect(() => {
     const tpl = searchParams.get('templateId');
@@ -34,6 +34,7 @@ function Create() {
     }
     setStep(3);
     setIsGenerating(true);
+    setEngine('pending'); // 等待中状态
     
     const res = await generateGame({
       templateId: selectedTemplate,
@@ -41,7 +42,8 @@ function Create() {
     });
 
     // 记录引擎类型
-    setEngine(res.data?.engine || 'mock');
+    const finalEngine = res.data?.engine || 'mock';
+    setEngine(finalEngine);
 
     if (res.success && res.data) {
       const work = {
@@ -50,13 +52,13 @@ function Create() {
         templateId: selectedTemplate,
         userPrompt: userInput,
         gameHtml: res.data.gameHtml,
-        engine: res.data.engine || 'mock',
+        engine: finalEngine,
         createdAt: Date.now(),
         playCount: 0,
       };
       addWork(work);
       // 短暂延迟让用户看到 AI 引擎标识
-      setTimeout(() => navigate(`/play/${work.id}`), 800);
+      setTimeout(() => navigate(`/play/${work.id}`), 1200);
     } else {
       alert(res.message || '生成失败，请重试！');
       setStep(2);
@@ -65,13 +67,14 @@ function Create() {
   };
 
   if (isGenerating || step === 3) {
-    const loadingText = engine === 'volcengine'
-      ? '🔥 AI 正在创作你的游戏...'
-      : '🎨 正在生成游戏...';
+    let loadingText = '🎨 正在生成游戏...';
+    if (engine === 'pending') loadingText = '⏳ 正在连接 AI 引擎...';
+    else if (engine === 'volcengine') loadingText = '🔥 AI 正在创作你的游戏...';
+    
     return (
       <div className="create-page">
         <LoadingAnimation text={loadingText} />
-        {engine && (
+        {engine && engine !== 'pending' && (
           <div className="engine-badge">
             {engine === 'volcengine' ? '🤖 火山引擎 AI' : '📦 本地模板'}
           </div>
