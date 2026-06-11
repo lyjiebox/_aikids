@@ -67,10 +67,10 @@ function Play() {
       {/* iframe 沙箱运行游戏 */}
       <div className="game-iframe-container">
         <iframe
-          srcDoc={work.gameHtml}                              {/* 直接用 HTML 字符串渲染 */}
+          srcDoc={work.gameHtml}
           className="game-iframe"
           title={work.title}
-          sandbox="allow-scripts allow-same-origin"            {/* 安全沙箱 */}
+          sandbox="allow-scripts allow-same-origin"
         />
       </div>
     </div>

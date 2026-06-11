@@ -88,8 +88,8 @@ export function VoiceInput({ value, onChange }: VoiceInputProps) {
         className={`mic-button ${isRecording ? 'recording' : ''}`}
         onMouseDown={startRecording}
         onMouseUp={stopRecording}
-        onMouseLeave={stopRecording}     {/* 鼠标移出也停止（防止卡录音） */}
-        onTouchStart={startRecording}     {/* 移动端触摸支持 */}
+        onMouseLeave={stopRecording}
+        onTouchStart={startRecording}
         onTouchEnd={stopRecording}
       >
         {isRecording ? (
