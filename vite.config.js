@@ -17,6 +17,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  // 支持通过 homewebpage 反向代理访问（/aikids 前缀）
+  // 也支持独立域名直接访问（aikids-five.vercel.app/aikids/）
+  base: '/aikids/',
   server: {
     port: 3000,
     // 开发环境代理：将 /api 请求转发到本地后端
