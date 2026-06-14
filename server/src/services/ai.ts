@@ -12,10 +12,10 @@
  * 3. OpenAI
  * 
  * 环境变量：
- *   VOLCENGINE_API_KEY — 火山引擎 API Key
- *   VOLCENGINE_MODEL    — 模型名（默认 doubao-seed-1-8-251228）
- *   ANTHROPIC_API_KEY   — Anthropic API Key
- *   OPENAI_API_KEY      — OpenAI API Key
+ *   VOLCENGINE_API_KEY      — 火山引擎 API Key
+ *   VOLCENGINE_ENDPOINT_ID  — 推理接入点 ID（ep-xxx）
+ *   ANTHROPIC_API_KEY       — Anthropic API Key（备选）
+ *   OPENAI_API_KEY          — OpenAI API Key（备选）
  */
 
 // ============================================================
@@ -103,11 +103,11 @@ export async function generateGameWithAI(req: GameGenerationRequest): Promise<Ga
     userPrompt = TEMPLATE_HINTS[req.templateId] + '。' + userPrompt;
   }
 
-  // 1. 火山引擎 Agent Plan（Responses API）— 优先使用
-  if (process.env.VOLCENGINE_API_KEY) {
+  // 1. 火山引擎 Responses API — 优先使用（需同时配置 Key 与接入点 ID）
+  if (process.env.VOLCENGINE_API_KEY && process.env.VOLCENGINE_ENDPOINT_ID) {
     return await callVolcengineResponses(
       process.env.VOLCENGINE_API_KEY,
-      process.env.VOLCENGINE_MODEL || 'doubao-seed-1-8-251228',
+      process.env.VOLCENGINE_ENDPOINT_ID,
       userPrompt
     );
   }
@@ -122,7 +122,7 @@ export async function generateGameWithAI(req: GameGenerationRequest): Promise<Ga
     return await callOpenAI(process.env.OPENAI_API_KEY, userPrompt);
   }
 
-  throw new Error("未配置有效的 AI API Key，请配置 VOLCENGINE_API_KEY、ANTHROPIC_API_KEY 或 OPENAI_API_KEY");
+  throw new Error("未配置有效的 AI API Key，请配置 VOLCENGINE_API_KEY + VOLCENGINE_ENDPOINT_ID、ANTHROPIC_API_KEY 或 OPENAI_API_KEY");
 }
 
 /**
@@ -131,7 +131,7 @@ export async function generateGameWithAI(req: GameGenerationRequest): Promise<Ga
  * 使用 Agent Plan 订阅的预付费额度，不额外计费。
  * API 文档：https://www.volcengine.com/docs/82379
  */
-async function callVolcengineResponses(apiKey: string, model: string, userPrompt: string): Promise<GameGenerationResult> {
+async function callVolcengineResponses(apiKey: string, endpointId: string, userPrompt: string): Promise<GameGenerationResult> {
   const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
     method: 'POST',
     headers: {
@@ -139,7 +139,7 @@ async function callVolcengineResponses(apiKey: string, model: string, userPrompt
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model,
+      model: endpointId,
       input: [
         { role: 'system', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
         { role: 'user', content: [{ type: 'input_text', text: userPrompt }] }

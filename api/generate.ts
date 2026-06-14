@@ -10,8 +10,8 @@
  * 4. 返回游戏 HTML 代码 + 引擎标识（volcengine/mock）
  * 
  * 依赖的环境变量（在 Vercel Settings 中配置）：
- *   VOLCENGINE_API_KEY — 火山引擎 Agent Plan 订阅的 API Key
- *   VOLCENGINE_MODEL    — 模型名，默认 doubao-seed-1-8-251228
+ *   VOLCENGINE_API_KEY      — 火山引擎 API Key
+ *   VOLCENGINE_ENDPOINT_ID  — 推理接入点 ID（ep-xxx）
  * 
  * 超时配置：vercel.json 中 maxDuration 设为 60 秒
  * （火山引擎生成游戏通常需要 15-30 秒）
@@ -72,11 +72,13 @@ const SYSTEM_PROMPT = `你是一个专为儿童设计游戏的 AI 游戏工程�
  * API 文档：https://www.volcengine.com/docs/82379（Responses API）
  */
 async function callVolcengineAI(userPrompt: string): Promise<{ title: string; html: string }> {
-  // 从环境变量读取 API Key 和模型名
   const apiKey = process.env.VOLCENGINE_API_KEY;
-  const model = process.env.VOLCENGINE_MODEL || 'doubao-seed-1-8-251228';
+  const endpointId = process.env.VOLCENGINE_ENDPOINT_ID;
 
-  // 调用火山引擎 Responses API（注意：不是 Chat Completions API）
+  if (!apiKey || !endpointId) {
+    throw new Error('缺少 VOLCENGINE_API_KEY 或 VOLCENGINE_ENDPOINT_ID');
+  }
+
   const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
     method: 'POST',
     headers: {
@@ -84,7 +86,7 @@ async function callVolcengineAI(userPrompt: string): Promise<{ title: string; ht
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model,
+      model: endpointId,
       input: [
         { role: 'system', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
         { role: 'user', content: [{ type: 'input_text', text: userPrompt }] }
@@ -280,10 +282,10 @@ app.post('/', async (c) => {
     let game;
     let engine: 'volcengine' | 'mock' = 'mock';
 
-    // 尝试火山引擎 AI 生成
-    if (process.env.VOLCENGINE_API_KEY) {
+    // 尝试火山引擎 AI 生成（需同时配置 Key 与接入点 ID）
+    if (process.env.VOLCENGINE_API_KEY && process.env.VOLCENGINE_ENDPOINT_ID) {
       try {
-        console.log('[generate] 调用火山引擎 Responses API...');
+        console.log('[generate] 调用火山引擎 Responses API, endpoint:', process.env.VOLCENGINE_ENDPOINT_ID.slice(0, 8) + '...');
         game = await callVolcengineAI(finalPrompt);
         engine = 'volcengine';
         console.log('[generate] ✅ AI 生成成功:', game.title);
@@ -292,7 +294,11 @@ app.post('/', async (c) => {
         game = generateMockGame(userPrompt, templateId);
       }
     } else {
-      console.log('[generate] 未配置 API Key，使用 Mock');
+      const missing = [
+        !process.env.VOLCENGINE_API_KEY && 'VOLCENGINE_API_KEY',
+        !process.env.VOLCENGINE_ENDPOINT_ID && 'VOLCENGINE_ENDPOINT_ID',
+      ].filter(Boolean);
+      console.log('[generate] 火山引擎未配置完整，缺少:', missing.join(', '), '→ 使用 Mock');
       game = generateMockGame(userPrompt, templateId);
     }
 
