@@ -13,11 +13,10 @@
  *   VOLCENGINE_API_KEY      — 火山引擎 API Key
  *   VOLCENGINE_ENDPOINT_ID  — 推理接入点 ID（ep-xxx）
  * 
- * 超时配置：vercel.json 中 maxDuration 设为 60 秒
- * （火山引擎生成游戏通常需要 15-30 秒）
+ * 超时配置：vercel.json 中 maxDuration 设为 300 秒（5 分钟）
+ * （火山引擎生成完整 HTML5 游戏通常需要 1-3 分钟）
  */
 import { Hono } from 'hono';
-import { handle } from 'hono/vercel';
 
 // ============================================================
 // AI System Prompt — 告诉 AI 怎么生成儿童游戏
@@ -266,7 +265,7 @@ const app = new Hono();
  * 4. 无 Key → 直接用 Mock
  * 5. 返回结果 + engine 标识（前端据此显示不同 UI）
  */
-app.post('/', async (c) => {
+app.post('*', async (c) => {
   try {
     const body = await c.req.json();
     const { templateId, userPrompt } = body;
@@ -320,4 +319,5 @@ app.post('/', async (c) => {
   }
 });
 
-export default handle(app);
+/** Vercel 要求使用命名 HTTP 方法导出，否则 Response 会被忽略导致超时 */
+export const POST = (request: Request) => app.fetch(request);
