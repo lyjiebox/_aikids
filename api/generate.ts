@@ -17,7 +17,7 @@
  * （火山引擎生成游戏通常需要 15-30 秒）
  */
 import { Hono } from 'hono';
-import { handle } from '@hono/node-server/vercel';
+import { handle } from 'hono/vercel';
 
 // ============================================================
 // AI System Prompt — 告诉 AI 怎么生成儿童游戏
