@@ -26,7 +26,12 @@ export function loadWorks() {
     const raw = localStorage.getItem(WORKS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    // V2.0 旧数据兼容：补全 remixCount 默认 0
+    return parsed.map(work => ({
+      ...work,
+      remixCount: work.remixCount ?? 0
+    }));
   } catch (e) {
     console.error("[storage] loadWorks failed:", e);
     return [];

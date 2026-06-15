@@ -61,6 +61,16 @@ function appReducer(state, action) {
       });
       return { ...state, works: updatedWorks };
 
+    // 作品被 Remix 次数 +1
+    case 'INCREMENT_REMIXCOUNT':
+      const remixUpdatedWorks = state.works.map(w => {
+        if (w.id === action.payload) {
+          return { ...w, remixCount: (w.remixCount ?? 0) + 1 };
+        }
+        return w;
+      });
+      return { ...state, works: remixUpdatedWorks };
+
     // 更新家长设置（部分更新，合并到现有设置）
     case 'SET_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } };
@@ -122,6 +132,7 @@ export function AppProvider({ children }) {
   const addWork = (work) => dispatch({ type: 'ADD_WORK', payload: work });
   const deleteWork = (id) => dispatch({ type: 'DELETE_WORK', payload: id });
   const incrementPlayCount = (id) => dispatch({ type: 'INCREMENT_PLAYCOUNT', payload: id });
+  const incrementRemixCount = (id) => dispatch({ type: 'INCREMENT_REMIXCOUNT', payload: id });
   const updateSettings = (settings) => dispatch({ type: 'SET_SETTINGS', payload: settings });
 
   // 用 useMemo 缓存 context value，避免不必要的重渲染
@@ -131,6 +142,7 @@ export function AppProvider({ children }) {
     addWork,
     deleteWork,
     incrementPlayCount,
+    incrementRemixCount,
     updateSettings,
   }), [state]);
 
