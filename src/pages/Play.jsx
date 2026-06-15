@@ -16,15 +16,30 @@
  * - 不允许顶层导航、弹窗、表单提交
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import RemixModal from '../components/RemixModal';
 import './Play.css';
 
 function Play() {
   const { workId } = useParams();          // URL 参数：作品 ID
   const navigate = useNavigate();           // 路由跳转
   const { state, incrementPlayCount } = useAppContext();
+  const [showRemixModal, setShowRemixModal] = useState(false);
+
+  const handleRemixConfirm = (instruction) => {
+    const remixContext = {
+      remixFrom: work.id,
+      remixInstruction: instruction,
+      originalTitle: work.title,
+      originalUserPrompt: work.userPrompt,
+      originalGameHtml: work.gameHtml.slice(0, 300),
+      templateId: work.templateId
+    };
+    sessionStorage.setItem('aikids-remix-context', JSON.stringify(remixContext));
+    navigate('/create?remix=1');
+  };
 
   // 从作品列表中查找当前作品
   const work = useMemo(() => 
@@ -57,12 +72,17 @@ function Play() {
 
   return (
     <div className="play-page">
-      {/* 顶部浮动栏：退出按钮 + 游戏标题 */}
+      {/* 顶部浮动栏：退出按钮 + 游戏标题 + Remix 按钮 */}
       <div className="top-bar">
         <button className="close-btn" onClick={() => navigate('/gallery')}>✕</button>
         <h1 className="game-title">{work.title}</h1>
-        <div className="spacer"></div>
+        <button className="remix-btn" onClick={() => setShowRemixModal(true)}>🔄 Remix</button>
       </div>
+      <RemixModal
+        isOpen={showRemixModal}
+        onClose={() => setShowRemixModal(false)}
+        onConfirm={handleRemixConfirm}
+      />
 
       {/* iframe 沙箱运行游戏 */}
       <div className="game-iframe-container">

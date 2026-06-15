@@ -38,8 +38,14 @@
   margin: 0;
 }
 
-.spacer {
-  width: 30px;
+.remix-btn {
+  font-size: 20px;
+  border-radius: 16px;
+  border: none;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #7c4dff, #536dfe);
+  color: white;
+  cursor: pointer;
 }
 
 .game-iframe-container {
