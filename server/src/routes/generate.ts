@@ -112,7 +112,7 @@ const generateRoute = new Hono();
 generateRoute.post("/", async (c) => {
   try {
     const body = (await c.req.json()) as GenerateRequest;
-    const { templateId, userPrompt } = body;
+    const { templateId, userPrompt, remixFrom, remixInstruction } = body;
     
     console.log('生成游戏请求:', { templateId, userPrompt: userPrompt?.slice(0, 50) });
     
