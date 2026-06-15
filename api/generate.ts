@@ -90,7 +90,7 @@ async function callVolcengineAI(userPrompt: string): Promise<{ title: string; ht
         { role: 'system', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
         { role: 'user', content: [{ type: 'input_text', text: userPrompt }] }
       ],
-      max_output_tokens: 4096
+      max_output_tokens: 8192
     })
   });
 
@@ -128,23 +128,49 @@ async function callVolcengineAI(userPrompt: string): Promise<{ title: string; ht
  * 1. 纯 JSON: {"title":"xxx","html":"..."}
  * 2. Markdown 代码块: ```json { ... } ```
  * 3. 普通代码块: ``` { ... } ```
+ * 4. JSON 被截断时，尝试从已有内容提取 title 和 html
  * 
  * @throws 如果所有解析方式都失败
  */
 function parseGameOutput(text: string): { title: string; html: string } {
-  // 直接解析 JSON
+  // 策略 1：直接解析 JSON
   try { return JSON.parse(text); } catch {}
 
-  // 提取 ```json ... ```
+  // 策略 2：提取 ```json ... ```
   const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
   if (jsonMatch) {
     try { return JSON.parse(jsonMatch[1]); } catch {}
   }
 
-  // 提取 ``` ... ```
+  // 策略 3：提取 ``` ... ```
   const codeMatch = text.match(/```\s*([\s\S]*?)\s*```/);
   if (codeMatch) {
     try { return JSON.parse(codeMatch[1]); } catch {}
+  }
+
+  // 策略 4：JSON 被截断时，尝试用正则提取 title 和 html
+  // 匹配 "title": "..." 和 "html": "..."（即使 JSON 不完整）
+  const titleMatch = text.match(/"title"\s*:\s*"([^"]*)"/);
+  const htmlMatch = text.match(/"html"\s*:\s*"([\s\S]*?)(?:"\s*\}|$)/);
+  if (titleMatch && htmlMatch) {
+    let html = htmlMatch[1]
+      .replace(/\\n/g, '\n')   // 反转义换行
+      .replace(/\\"/g, '"')    // 反转义引号
+      .replace(/\\t/g, '\t')   // 反转义制表符
+      .replace(/\\\\/g, '\\'); // 反转义反斜杠
+    console.log('[generate] ⚠️ JSON 不完整，通过正则提取了 title 和 html');
+    return { title: titleMatch[1], html };
+  }
+
+  // 策略 5：如果返回的是纯 HTML（没有 JSON 包裹），直接当 html 用
+  const doctypeMatch = text.match(/<!DOCTYPE html>[\s\S]*/i);
+  if (doctypeMatch) {
+    const titleFromTag = text.match(/<title>([^<]*)<\/title>/i);
+    console.log('[generate] ⚠️ AI 返回了纯 HTML，直接使用');
+    return {
+      title: titleFromTag ? titleFromTag[1] : 'AI 生成的游戏',
+      html: doctypeMatch[0],
+    };
   }
 
   throw new Error('无法解析 AI 输出');
