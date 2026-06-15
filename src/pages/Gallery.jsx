@@ -88,6 +88,7 @@ function Gallery() {
                   month: 'numeric',
                   day: 'numeric'
                 })} · 玩了 {work.playCount} 次
+                {work.generationTime != null && ` · 生成 ${work.generationTime} 秒`}
               </p>
             </div>
           </div>

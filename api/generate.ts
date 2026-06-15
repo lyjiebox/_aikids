@@ -114,6 +114,9 @@ async function callVolcengineAI(userPrompt: string): Promise<{ title: string; ht
   const text = assistantOutput.content?.find((c: any) => c.type === 'output_text')?.text;
   if (!text) throw new Error('API 未返回文本内容');
 
+  // 打印 AI 原始输出（前 500 字符），方便调试解析失败
+  console.log('[generate] AI 原始输出 (前500字符):', text.slice(0, 500));
+
   // 解析 AI 返回的 JSON（AI 应该返回 { title, html }）
   return parseGameOutput(text);
 }

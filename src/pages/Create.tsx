@@ -20,7 +20,7 @@
  *   'mock'    → 降级到本地模板
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { TEMPLATES } from '../config/site';
 import { useAppContext } from '../context/AppContext';
@@ -40,6 +40,9 @@ function Create() {
   const [step, setStep] = useState(1);                                // 当前步骤
   const [isGenerating, setIsGenerating] = useState(false);            // 是否正在生成
   const [engine, setEngine] = useState(null);                         // AI 引擎类型
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);            // 生成耗时（秒）
+  const startTimeRef = useRef<number>(0);                             // 生成开始时间戳
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null); // 计时器引用
 
   // 如果 URL 带了 templateId，自动预选模板并跳到步骤 2
   useEffect(() => {
@@ -62,6 +65,13 @@ function Create() {
     setStep(3);
     setIsGenerating(true);
     setEngine('pending'); // 显示"正在连接 AI 引擎..."
+    setElapsedSeconds(0);
+    startTimeRef.current = Date.now();
+    
+    // 启动计时器，每秒更新
+    timerRef.current = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    }, 1000);
     
     try {
       const res = await generateGame({
@@ -73,6 +83,13 @@ function Create() {
       setEngine(finalEngine);
 
       if (res.success && res.data) {
+        // 停止计时器
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        const generationTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        
         // 构建作品对象
         const work = {
           id: Date.now().toString(),           // 用时间戳做唯一 ID
@@ -83,21 +100,39 @@ function Create() {
           engine: finalEngine,
           createdAt: Date.now(),
           playCount: 0,
+          generationTime,                      // 生成耗时（秒）
         };
         addWork(work);
         // 短暂延迟让用户看到引擎标识
         setTimeout(() => navigate(`/play/${work.id}`), 1200);
       } else {
+        // 停止计时器
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
         alert(res.message || '生成失败，请重试！');
         setStep(2);
       }
     } catch (err) {
+      // 停止计时器
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       console.error('生成失败:', err);
       alert('网络请求失败，请检查网络后重试！');
       setStep(2);
     }
     setIsGenerating(false);
   };
+
+  // 组件卸载时清理计时器
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   // ============================================================
   // 步骤 3：生成中 → 显示 Loading 动画
@@ -111,6 +146,10 @@ function Create() {
     return (
       <div className="create-page">
         <LoadingAnimation text={loadingText} />
+        {/* 计时器 */}
+        <div className="generation-timer">
+          ⏱️ 已等待 {elapsedSeconds} 秒
+        </div>
         {/* API 返回后显示引擎标识 */}
         {engine && engine !== 'pending' && (
           <div className="engine-badge">

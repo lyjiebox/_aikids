@@ -153,3 +153,11 @@
   margin-right: auto;
   width: fit-content;
 }
+
+.generation-timer {
+  text-align: center;
+  margin-top: 16px;
+  color: rgba(255,255,255,0.8);
+  font-size: 18px;
+  font-weight: 500;
+}
