@@ -297,13 +297,25 @@ const app = new Hono();
 app.post('*', async (c) => {
   try {
     const body = await c.req.json();
-    const { templateId, userPrompt } = body;
+    const { templateId, userPrompt, remixFrom, remixInstruction, originalUserPrompt, originalTitle, originalGameHtmlPreview } = body;
     
-    console.log('[generate] 请求:', { templateId, prompt: userPrompt?.slice(0, 50) });
+    console.log('[generate] 请求:', { templateId, prompt: userPrompt?.slice(0, 50), remix: !!remixFrom });
 
-    // 拼接模板提示前缀，让 AI 生成更贴合主题的游戏
     let finalPrompt = userPrompt;
-    if (templateId && TEMPLATE_HINTS[templateId]) {
+    if (remixFrom && remixInstruction) {
+      // Remix 模式：拼接原始游戏信息 + 改编想法
+      finalPrompt = `
+原始游戏信息：
+- 原始用户描述：${originalUserPrompt || ''}
+- 原始游戏标题：${originalTitle || ''}
+- 原始游戏 HTML 片段：${originalGameHtmlPreview || ''}
+
+用户的改编想法：${remixInstruction}
+
+请根据原始游戏和改编想法，生成一个完整的新游戏。新游戏应体现用户的改编意图，同时保持适合 3-10 岁儿童的简洁玩法。
+`;
+    } else if (templateId && TEMPLATE_HINTS[templateId]) {
+      // 普通创作模式：拼接模板提示前缀
       finalPrompt = TEMPLATE_HINTS[templateId] + '。' + userPrompt;
     }
 
