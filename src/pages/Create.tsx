@@ -31,9 +31,10 @@ import { VoiceInput } from '../components/VoiceInput';
 import './Create.css';
 
 function Create() {
-  const [searchParams] = useSearchParams();     // URL 参数（预选模板）
+  const [searchParams] = useSearchParams();     // URL 参数（预选模板/Remix）
   const navigate = useNavigate();
-  const { addWork } = useAppContext();
+  const { addWork, incrementRemixCount } = useAppContext();
+  const [remixContext, setRemixContext] = useState(null);
   
   const [selectedTemplate, setSelectedTemplate] = useState('free');  // 当前选中的模板
   const [userInput, setUserInput] = useState('');                     // 用户输入文本
@@ -44,17 +45,100 @@ function Create() {
   const startTimeRef = useRef<number>(0);                             // 生成开始时间戳
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null); // 计时器引用
 
-  // 如果 URL 带了 templateId，自动预选模板并跳到步骤 2
+  // 如果是 Remix 模式，自动加载上下文并开始生成
   useEffect(() => {
-    const tpl = searchParams.get('templateId');
-    if (tpl && TEMPLATES.find(t => t.id === tpl)) {
-      setSelectedTemplate(tpl);
-      setStep(2);
+    const isRemix = searchParams.get('remix') === '1';
+    if (isRemix) {
+      const raw = sessionStorage.getItem('aikids-remix-context');
+      if (!raw) {
+        alert('改编信息已失效，请重新操作');
+        navigate('/gallery');
+        return;
+      }
+      try {
+        const ctx = JSON.parse(raw);
+        setRemixContext(ctx);
+        setSelectedTemplate(ctx.templateId);
+        setUserInput(ctx.remixInstruction);
+        // 消费一次性上下文
+        sessionStorage.removeItem('aikids-remix-context');
+        // 自动开始生成
+        setTimeout(() => handleRemixGenerate(ctx), 100);
+      } catch (e) {
+        alert('改编信息解析失败');
+        navigate('/gallery');
+      }
+    } else {
+      // 普通模式：URL 带了 templateId 自动预选
+      const tpl = searchParams.get('templateId');
+      if (tpl && TEMPLATES.find(t => t.id === tpl)) {
+        setSelectedTemplate(tpl);
+        setStep(2);
+      }
     }
   }, [searchParams]);
 
   /**
-   * 点击"开始生成"按钮
+   * Remix 生成：复用原有生成流程，传递 Remix 字段
+   */
+  const handleRemixGenerate = async (ctx) => {
+    setStep(3);
+    setIsGenerating(true);
+    setEngine('pending');
+    setElapsedSeconds(0);
+    startTimeRef.current = Date.now();
+    timerRef.current = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    }, 1000);
+    try {
+      const res = await generateGame({
+        templateId: ctx.templateId,
+        userPrompt: ctx.remixInstruction,
+        remixFrom: ctx.remixFrom,
+        remixInstruction: ctx.remixInstruction,
+        originalUserPrompt: ctx.originalUserPrompt,
+        originalTitle: ctx.originalTitle,
+        originalGameHtmlPreview: ctx.originalGameHtml
+      });
+      const finalEngine = res.data?.engine || 'mock';
+      setEngine(finalEngine);
+      if (res.success && res.data) {
+        if (timerRef.current) clearInterval(timerRef.current);
+        const generationTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const work = {
+          id: Date.now().toString(),
+          title: res.data.title,
+          templateId: ctx.templateId,
+          userPrompt: ctx.remixInstruction,
+          gameHtml: res.data.gameHtml,
+          engine: finalEngine,
+          createdAt: Date.now(),
+          playCount: 0,
+          generationTime,
+          remixFrom: ctx.remixFrom,
+          remixInstruction: ctx.remixInstruction,
+          remixCount: 0
+        };
+        addWork(work);
+        // 更新原始作品 remixCount
+        incrementRemixCount(ctx.remixFrom);
+        setTimeout(() => navigate(`/play/${work.id}`), 1200);
+      } else {
+        if (timerRef.current) clearInterval(timerRef.current);
+        alert(res.message || '生成失败，请重试！');
+        setStep(2);
+      }
+    } catch (err) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      console.error('生成失败:', err);
+      alert('网络请求失败，请检查网络后重试！');
+      setStep(2);
+    }
+    setIsGenerating(false);
+  };
+
+  /**
+   * 点击"开始生成"按钮（普通创作）
    * 流程：设置 loading 状态 → 调用 API → 保存作品 → 跳转播放页
    */
   const handleGenerate = async () => {
@@ -101,6 +185,7 @@ function Create() {
           createdAt: Date.now(),
           playCount: 0,
           generationTime,                      // 生成耗时（秒）
+          remixCount: 0
         };
         addWork(work);
         // 短暂延迟让用户看到引擎标识
