@@ -1,0 +1,81 @@
+.remix-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.remix-modal-card {
+  background: #fff;
+  border-radius: 24px;
+  padding: 32px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.remix-modal-title {
+  font-size: 24px;
+  text-align: center;
+  margin: 0 0 8px;
+}
+
+.remix-modal-subtitle {
+  font-size: 18px;
+  text-align: center;
+  color: #666;
+  margin: 0 0 24px;
+}
+
+.remix-modal-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 16px;
+  border: 2px solid #eee;
+  padding: 16px;
+  font-size: 18px;
+  outline: none;
+  resize: none;
+}
+
+.remix-modal-input:focus {
+  border-color: #7c4dff;
+}
+
+.remix-modal-error {
+  color: #f44336;
+  font-size: 14px;
+  margin: 8px 0 0;
+  text-align: center;
+}
+
+.remix-modal-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.remix-modal-btn {
+  flex: 1;
+  border-radius: 16px;
+  border: none;
+  padding: 14px 20px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.remix-modal-btn-cancel {
+  background: #eee;
+  color: #333;
+}
+
+.remix-modal-btn-confirm {
+  background: linear-gradient(135deg, #7c4dff, #536dfe);
+  color: #fff;
+}
