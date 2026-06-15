@@ -52,8 +52,8 @@
 
 ### 本次包含（V1.0）
 
-- [ ] 基于 Taro + React + TypeScript 的跨端项目骨架，支持 H5（PC + 手机 Web）
-- [ ] 独立后端 API 服务（AI 生成、作品管理、语音识别代理）
+- [ ] 基于 Vite + React 的 H5 项目骨架，支持 PC + 手机 Web
+- [ ] 独立后端 API 服务（AI 生成、作品管理），双模式：Vercel Serverless（`api/`）+ 本地开发（`server/`）
 - [ ] 首页：面向儿童的简洁入口，大图标 + 语音引导
 - [ ] 语音输入页面：儿童按住说话 → AI 解析创意 → 生成可交互小游戏
 - [ ] 游戏模板库：预设 5-10 个主题模板（动物、汽车、公主、恐龙、太空等），降低创作门槛
@@ -104,27 +104,29 @@
 
 ### 前端
 
-- 跨端框架：Taro 3.x（React 语法）
-- 语言：TypeScript（严格模式）
-- 样式：明亮、多彩、圆角、大字体，适合儿童审美
+- 框架：Vite + React 18（JavaScript + 少量 TypeScript）
+- 路由：React Router v6（BrowserRouter）
+- 样式：普通 CSS 文件，明亮、多彩、圆角、大字体，适合儿童审美
 - 目标平台：V1.x → H5（PC + 手机 Web）；V2.x → 微信小程序
-- 构建工具：Taro CLI（底层 Webpack/Vite）
+- 构建工具：Vite
+- 部署：Vercel（静态站点 + Serverless Functions）
 
 ### 后端
 
 - 运行时：Node.js
-- 框架：Hono（轻量，支持 Vercel Functions / 云函数部署）
+- 框架：Hono（轻量，支持 Vercel Functions / 本地 Node.js 服务）
 - 语言：TypeScript（严格模式）
-- AI 生成：调用大模型 API（Claude / GPT）生成 HTML5 游戏代码
-- 语音识别：后端代理调用第三方语音识别服务（如百度语音 / 腾讯云 ASR）
-- 存储：V1.0 本地 localStorage；V1.1 起迁移到云存储（OSS + 数据库）
-- 部署：Vercel Functions 或国内云函数（如阿里云 FC / 腾讯云 SCF）
+- AI 生成：调用火山引擎 Responses API（支持 Seed 2.0 Pro、DeepSeek、GLM 等模型）
+- 语音识别：V1.0 浏览器 Web Speech API；V1.1 起迁移到后端语音识别服务
+- 存储：V1.0 前端 localStorage；V1.1 起迁移到云存储
+- 部署：Vercel Functions（生产环境 `api/` 目录）+ 本地 `server/` 开发服务
 
 ### 架构原则
 
 - **前后端分离**：前端只做 UI 和交互，核心逻辑（AI 生成、语音识别、内容审核）全部在后端
 - **一套 API，多端复用**：V1 H5 和 V2 小程序调用同一套后端 API
 - **渐进增强**：V1.0 最小可用，V1.1 补云端能力，V2.0 扩展小程序
+- **双后端模式**：Vercel 部署用 `api/generate.ts`（Serverless），本地开发用 `server/`（独立 Hono 服务）
 
 ## 设计原则
 

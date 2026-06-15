@@ -24,115 +24,101 @@ V1.0 聚焦：
 
 ### 3.1 前端
 
-- 跨端框架：Taro 3.x（React 语法，支持 H5 + 微信小程序）
-- 语言：TypeScript（严格模式）
-- 样式：CSS Modules + CSS Custom Properties（明亮多彩儿童风格）
+- 框架：Vite + React 18（JavaScript，部分组件使用 TypeScript）
+- 路由：React Router v6（BrowserRouter）
+- 样式：普通 CSS 文件（明亮多彩儿童风格）
 - 状态管理：React Context + useReducer
-- 路由：Taro Router（Taro 内置路由，跨端兼容）
 - 语音输入（H5）：浏览器 Web Speech API（V1.0）；V1.1 起迁移到后端语音识别服务
 - 游戏运行（H5）：iframe sandbox
-- 构建工具：Taro CLI（底层 Webpack）
+- 构建工具：Vite
 - Package Manager：npm
 
 ### 3.2 后端
 
 - 运行时：Node.js
-- 框架：Hono（轻量，支持 Vercel Functions / 云函数部署）
+- 框架：Hono（轻量，支持 Vercel Functions / 本地 Node.js 服务）
 - 语言：TypeScript（严格模式）
-- AI 生成：Claude API / OpenAI API（生成 HTML5 游戏代码）
-- 语音识别（V1.1+）：后端代理调用第三方语音识别服务（如百度语音 / 腾讯云 ASR）
+- AI 生成：火山引擎 Responses API（支持 Seed 2.0 Pro、DeepSeek、GLM 等模型）
+- 语音识别（V1.1+）：后端代理调用第三方语音识别服务
 - 存储：V1.0 前端 localStorage；V1.1 起迁移到云存储
-- 部署：Vercel Functions（V1.0 开发阶段本地运行）
+- 部署：Vercel Functions（生产环境 `api/` 目录）+ 本地 `server/` 开发服务
 
 ### 3.3 架构图
 
 ```
 ┌─────────────────────────────────────┐
-│           后端 API 服务 (Hono)       │
-│  POST /api/generate   AI 游戏生成    │
-│  GET  /api/works      作品列表       │
-│  POST /api/works      保存作品       │
-│  DEL  /api/works/:id  删除作品       │
-│  POST /api/speech     语音识别代理    │
+│         Vercel 生产环境              │
+│  api/generate.ts  Serverless Func   │
+│  src/             静态站点 (Vite)    │
 └──────────────┬──────────────────────┘
                │ HTTP
    ┌───────────┴───────────┐
    │                       │
    ▼                       ▼
 ┌──────────┐        ┌──────────────┐
-│ V1: Taro │        │ V2: Taro     │
-│ H5 Web   │        │ 微信小程序    │
-│ (PC+手机)│        │              │
+│ V1: Vite │        │ V2: Taro     │
+│ React    │        │ 微信小程序    │
+│ H5 Web   │        │              │
 └──────────┘        └──────────────┘
+
+本地开发：
+  Vite (localhost:3000) → proxy /api → server/ (localhost:4000)
 ```
 
 ## 4. 目录结构设计
 
 ```text
-ai-kid-games/
+_aikids/
 ├── docs/
 │   ├── proposal.md
 │   ├── design-v1.0.md
 │   └── uat-v1.0.md
 ├── temp/
 │   └── v1.0/
-├── client/                           # Taro 前端项目
+├── src/                              # Vite + React 前端
+│   ├── main.jsx                      # 应用入口
+│   ├── App.jsx                       # 根组件（路由配置）
+│   ├── index.css                     # 全局样式
 │   ├── config/
-│   │   ├── index.ts                  # Taro 配置
-│   │   ├── dev.ts                    # 开发环境配置
-│   │   └── prod.ts                   # 生产环境配置
-│   ├── src/
-│   │   ├── app.config.ts             # Taro 全局配置（路由、TabBar）
-│   │   ├── app.tsx                   # App 入口
-│   │   ├── app.scss                  # 全局样式 + CSS 变量
-│   │   ├── config/
-│   │   │   └── site.config.ts        # 统一配置（模板列表、API 地址等）
-│   │   ├── types/
-│   │   │   └── index.ts              # 类型定义
-│   │   ├── context/
-│   │   │   └── AppContext.tsx        # 全局状态（作品列表、家长设置）
-│   │   ├── hooks/
-│   │   │   ├── useSpeechRecognition.ts  # 语音识别 Hook（H5 端）
-│   │   │   └── useGameGenerator.ts      # AI 游戏生成 Hook
-│   │   ├── services/
-│   │   │   ├── api.ts                # 后端 API 调用封装
-│   │   │   └── storage.ts            # 本地存储（作品、设置）
-│   │   ├── components/
-│   │   │   ├── Layout.tsx            # 全局布局（底部 TabBar）
-│   │   │   ├── VoiceInput.tsx        # 语音输入组件（按住说话按钮）
-│   │   │   ├── TemplatePicker.tsx    # 模板选择器
-│   │   │   ├── GamePlayer.tsx        # 游戏播放器（H5: iframe 沙箱）
-│   │   │   ├── GameCard.tsx          # 作品卡片
-│   │   │   ├── LoadingAnimation.tsx  # AI 生成等待动画
-│   │   │   └── ParentGate.tsx        # 家长验证门（简单算术题）
-│   │   └── pages/
-│   │       ├── index/                # 首页（创作入口）
-│   │       │   └── index.tsx
-│   │       ├── create/               # 创作页（模板选择 + 语音输入）
-│   │       │   └── index.tsx
-│   │       ├── play/                 # 游戏播放页
-│   │       │   └── index.tsx
-│   │       ├── gallery/              # 作品列表页
-│   │       │   └── index.tsx
-│   │       └── settings/             # 家长设置页
-│   │           └── index.tsx
-│   ├── package.json
-│   └── tsconfig.json
-├── server/                           # 后端 API 项目
+│   │   └── site.js                   # 统一配置（模板列表、站点信息）
+│   ├── context/
+│   │   └── AppContext.jsx            # 全局状态（作品列表、家长设置）
+│   ├── hooks/
+│   │   └── useSpeechRecognition.ts   # 语音识别 Hook（Web Speech API）
+│   ├── services/
+│   │   ├── api.js                    # 后端 API 调用封装
+│   │   └── storage.js                # 本地存储（作品、设置）
+│   ├── components/
+│   │   ├── Navbar.jsx                # 底部导航栏
+│   │   ├── VoiceInput.tsx            # 语音输入组件（按住说话按钮）
+│   │   ├── TemplatePicker.jsx        # 模板选择器
+│   │   ├── LoadingAnimation.jsx      # AI 生成等待动画
+│   │   └── *.css                     # 各组件样式
+│   └── pages/
+│       ├── Home.jsx                  # 首页（创作入口）
+│       ├── Create.tsx                # 创作页（模板选择 + 语音输入 + 生成）
+│       ├── Play.jsx                  # 游戏播放页（iframe 沙箱）
+│       ├── Gallery.jsx               # 作品列表页
+│       ├── Settings.jsx              # 家长设置页（含 ParentGate）
+│       └── *.css                     # 各页面样式
+├── api/                              # Vercel Serverless Functions
+│   └── generate.ts                   # POST /api/generate（AI 游戏生成）
+├── server/                           # 本地开发后端
 │   ├── src/
 │   │   ├── index.ts                  # Hono 服务入口
+│   │   ├── loadEnv.ts                # 环境变量加载
 │   │   ├── routes/
-│   │   │   ├── generate.ts           # POST /api/generate
-│   │   │   ├── works.ts              # GET/POST/DEL /api/works
-│   │   │   └── speech.ts             # POST /api/speech（V1.1）
-│   │   ├── services/
-│   │   │   ├── ai.ts                 # AI API 调用（Claude/GPT）
-│   │   │   └── speech.ts             # 语音识别服务（V1.1）
-│   │   └── types/
-│   │       └── index.ts              # 后端类型定义
+│   │   │   └── generate.ts           # 本地 AI 生成路由
+│   │   └── test-generate.ts          # 本地测试脚本
 │   ├── package.json
 │   └── tsconfig.json
-└── README.md
+├── client-taro-broken/               # ⚠️ 已废弃：Taro 方案残留
+├── index.html                        # Vite 入口 HTML
+├── vite.config.js                    # Vite 构建配置
+├── vercel.json                       # Vercel 部署配置
+├── package.json                      # 前端依赖
+├── README.md
+└── DEPLOY.md
 ```
 
 ## 5. 数据模型
@@ -158,9 +144,10 @@ export type GameWork = {
   templateId: string;     // 使用的模板 ID
   userPrompt: string;     // 用户的原始语音输入文本
   gameHtml: string;       // AI 生成的完整 HTML 游戏代码
-  thumbnailUrl?: string;  // 缩略图（base64 或生成时截图）
+  engine: 'volcengine' | 'mock';  // AI 引擎类型（volcengine=火山引擎, mock=本地降级）
   createdAt: number;      // 创建时间戳
   playCount: number;      // 游玩次数
+  generationTime?: number; // 生成耗时（秒），V1.0.1 新增
 };
 ```
 
@@ -181,7 +168,6 @@ export type ParentSettings = {
 export type AppState = {
   works: GameWork[];              // 本地作品列表
   settings: ParentSettings;       // 家长设置
-  currentPage: string;            // 当前页面路由
   isGenerating: boolean;          // 是否正在生成游戏
   generationProgress: string;     // 生成进度提示文本
 };
@@ -291,6 +277,10 @@ export type AppState = {
 | DELETE | `/api/works/:id` | 删除作品 | ❌ | ✅ |
 | POST | `/api/speech` | 语音识别 | ❌ | ✅ |
 
+**部署说明**：
+- 生产环境（Vercel）：`api/generate.ts` 作为 Serverless Function 处理 `/api/generate`
+- 本地开发：`server/` 目录下的独立 Hono 服务（端口 4000），Vite 通过 proxy 转发 `/api/*` 请求
+
 ### 7.2 AI 游戏生成 API
 
 **请求**：
@@ -301,7 +291,6 @@ Content-Type: application/json
 {
   templateId: string;     // 模板 ID（可选，默认 "free"）
   userPrompt: string;     // 用户语音转文字内容
-  ageRange: [3, 10];      // 目标年龄段
 }
 ```
 
@@ -312,9 +301,14 @@ Content-Type: application/json
   data: {
     gameHtml: string;       // 完整的 HTML 游戏代码
     title: string;          // AI 生成的游戏标题
+    engine: 'volcengine' | 'mock';  // AI 引擎类型
   }
 }
 ```
+
+**AI 引擎**：
+- `volcengine`：火山引擎 Responses API 生成（需配置 `VOLCENGINE_API_KEY` + `VOLCENGINE_ENDPOINT_ID`）
+- `mock`：AI 不可用时的本地降级游戏（预设 2 个简单游戏）
 
 **AI Prompt 设计原则**：
 - System Prompt 中明确：生成面向 3-10 岁儿童的简单 HTML5 游戏
@@ -323,6 +317,15 @@ Content-Type: application/json
 - 要求：游戏时长控制在 30 秒 - 3 分钟
 - 要求：包含音效反馈（可选，Web Audio API 简单实现）
 - 限制：不使用外部资源，所有素材用 CSS/Canvas 绘制
+- 输出格式：JSON `{ "title": "...", "html": "..." }`
+- `max_output_tokens`：8192（V1.0.1 从 4096 上调，避免完整 HTML 被截断）
+
+**解析容错**（V1.0.1 增强）：
+- 策略 1：直接 JSON.parse
+- 策略 2：提取 ````json` 代码块
+- 策略 3：提取 ```` ` 代码块
+- 策略 4：JSON 被截断时正则提取 title 和 html
+- 策略 5：AI 返回纯 HTML 时直接使用
 
 ### 7.3 语音识别（V1.0）
 
@@ -339,34 +342,27 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 
 **V1.1 升级**：迁移到后端 `/api/speech`，使用第三方语音识别服务，提升兼容性和准确率。
 
-## 8. 路由设计（Taro）
+## 8. 路由设计（React Router）
 
-```ts
-// client/src/app.config.ts
-export default {
-  pages: [
-    'pages/index/index',       // 首页
-    'pages/create/index',      // 创作页
-    'pages/play/index',        // 游戏播放页
-    'pages/gallery/index',     // 作品列表页
-    'pages/settings/index',    // 家长设置页
-  ],
-  tabBar: {
-    list: [
-      { pagePath: 'pages/index/index', text: '首页', iconPath: '...', selectedIconPath: '...' },
-      { pagePath: 'pages/gallery/index', text: '作品', iconPath: '...', selectedIconPath: '...' },
-      { pagePath: 'pages/settings/index', text: '设置', iconPath: '...', selectedIconPath: '...' },
-    ],
-  },
-  window: {
-    navigationBarTitleText: 'AI 魔法游戏',
-  },
-};
+```jsx
+// src/App.jsx — 路由配置
+<Routes>
+  <Route path="/" element={<Home />} />
+  <Route path="/create" element={<Create />} />
+  <Route path="/play/:workId" element={<Play />} />
+  <Route path="/gallery" element={<Gallery />} />
+  <Route path="/settings" element={<Settings />} />
+</Routes>
 ```
 
+**底部导航**：自定义 Navbar 组件（React Router Link），固定在页面底部：
+- 🏠 首页 → `/`
+- 🎮 作品 → `/gallery`
+- ⚙️ 设置 → `/settings`
+
 **页面参数传递**：
-- 播放页通过路由参数传递 `workId`：`Taro.navigateTo({ url: '/pages/play/index?workId=xxx' })`
-- 创作页通过路由参数传递预选模板：`Taro.navigateTo({ url: '/pages/create/index?templateId=xxx' })`
+- 播放页通过路由参数传递 `workId`：`navigate(\`/play/${work.id}\`)`
+- 创作页通过 URL 查询参数传递预选模板：`navigate(\`/create?templateId=${templateId}\`)`
 
 ## 9. 错误处理
 
@@ -379,23 +375,24 @@ export default {
 
 ## 10. 代码规范
 
-- TypeScript 开启 strict
-- 公开导出的函数或组件必须包含类型提示和 JSDoc 注释
+- JavaScript/TypeScript 混合使用（前端 JS + 少量 TS，后端 TS strict）
+- 公开导出的函数或组件必须包含 JSDoc 注释
 - 组件使用函数式组件 + Hooks
-- 样式使用 CSS Modules（Taro 默认支持），全局变量定义在 `app.scss`
+- 样式使用普通 CSS 文件，全局变量定义在 `index.css`
 - 不引入第三方 UI 库（保持轻量）
-- 移动端优先，使用 Taro 的响应式单位（px 自动转换 rem/rpx）
-- Taro 组件和页面遵循 Taro 规范（文件名、导出方式等）
+- 移动端优先，使用响应式设计
 
 ## 11. 开发边界
 
 V1.0 不做：
 - 用户注册/登录
 - 云端存储与同步（V1.1）
-- 社交功能
+- 社交功能（Remix 等）
 - 教师端后台（V3.0）
 - 付费系统（V4.0）
 - 微信小程序编译（V2.0）
 - 原生 App 封装
 - 复杂内容审核（仅做基础 Prompt 关键词过滤）
 - 后端语音识别服务（V1.1）
+- 缩略图生成
+- 实际时长限制逻辑（仅有 UI 设置项）

@@ -24,11 +24,13 @@ npm run dev
 
 ```
 _aikids/
-├── docs/          # 设计文档 (Proposal / Design / UAT)
-├── server/        # Hono 后端服务
-├── frontend/      # Vite + React 前端 (新版本)
-├── temp/          # 临时文件
-└── README.md      # 本文件
+├── docs/               # 设计文档 (Proposal / Design / UAT)
+├── src/                # Vite + React 前端
+├── api/                # Vercel Serverless Functions（生产环境）
+├── server/             # Hono 本地开发后端服务
+├── client-taro-broken/ # ⚠️ 已废弃：早期 Taro 方案残留
+├── temp/               # 临时文件
+└── README.md           # 本文件
 ```
 
 ## ✨ 功能
@@ -41,8 +43,11 @@ _aikids/
 
 ## 📝 说明
 
-- 前端原来用 Taro 实现（见 client-taro-broken 目录），后来改成更简单的 Vite + React
-- 当前 AI 游戏生成为 Mock 实现，后续可接入真实 LLM
+- 前端原来用 Taro 实现（见 `client-taro-broken/` 目录，已废弃），后来改成更简单的 Vite + React
+- AI 游戏生成接入火山引擎 Responses API（支持 Seed 2.0 Pro、DeepSeek、GLM 等模型）
+- AI 不可用时自动降级到本地 Mock 游戏
+- 生产环境部署在 Vercel（`api/generate.ts` 作为 Serverless Function）
+- 独立域名：boxaikids.top
 
 ---
 
