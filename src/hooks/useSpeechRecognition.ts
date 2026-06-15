@@ -35,7 +35,7 @@ export function useSpeechRecognition() {
   // Refs（不需要触发重渲染的值用 ref）
   // ============================================================
   const recognitionRef = useRef<any>(null);       // SpeechRecognition 实例
-  const isSupportedRef = useRef(false);            // 浏览器是否支持
+  const [isSupported, setIsSupported] = useState(false);    // 浏览器是否支持语音识别（state 触发重渲染）
   const isRecordingRef = useRef(false);            // 录音状态（用于 cleanup）
 
   // ============================================================
@@ -45,7 +45,7 @@ export function useSpeechRecognition() {
     if (typeof window !== 'undefined') {
       // 兼容 Chrome（webkitSpeechRecognition）和标准 API
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      isSupportedRef.current = !!SpeechRecognition;
+      setIsSupported(!!SpeechRecognition);
 
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
@@ -164,7 +164,7 @@ export function useSpeechRecognition() {
     isRecording,
     transcript,
     interimTranscript,
-    isSupported: isSupportedRef.current,
+    isSupported,
     error,
     startRecording,
     stopRecording,

@@ -127,32 +127,19 @@ export function VoiceInput({ value, onChange }: VoiceInputProps) {
       {/* 错误提示 */}
       {error && <div className="error-text">{error}</div>}
 
-      {/* 文字输入框：有内容时显示，可以手动修改识别结果 */}
-      {value && (
-        <textarea
-          className="text-input-large"
-          placeholder="可以修改一下你的创意..."
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          rows={4}
-        />
-      )}
-
-      {/* 文字输入框：无内容时也显示，作为语音的替代方案 */}
+      {/* 文字输入框：始终渲染同一个元素，避免切换导致失焦 */}
       {!value && (
-        <>
-          <div className="text-input-toggle">
-            <span className="toggle-hint">或者直接输入文字</span>
-          </div>
-          <textarea
-            className="text-input-large"
-            placeholder="在这里输入你的游戏创意..."
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            rows={3}
-          />
-        </>
+        <div className="text-input-toggle">
+          <span className="toggle-hint">或者直接输入文字</span>
+        </div>
       )}
+      <textarea
+        className="text-input-large"
+        placeholder={value ? "可以修改一下你的创意..." : "在这里输入你的游戏创意..."}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={value ? 4 : 3}
+      />
     </div>
   );
 }
