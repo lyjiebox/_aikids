@@ -25,8 +25,9 @@ import './Play.css';
 function Play() {
   const { workId } = useParams();          // URL 参数：作品 ID
   const navigate = useNavigate();           // 路由跳转
-  const { state, incrementPlayCount } = useAppContext();
+  const { state, incrementPlayCount, deleteWork } = useAppContext();
   const [showRemixModal, setShowRemixModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleRemixConfirm = (instruction) => {
     const remixContext = {
@@ -39,6 +40,11 @@ function Play() {
     };
     sessionStorage.setItem('aikids-remix-context', JSON.stringify(remixContext));
     navigate('/create?remix=1');
+  };
+
+  const handleDeleteConfirm = () => {
+    deleteWork(workId);
+    navigate('/gallery');
   };
 
   // 从作品列表中查找当前作品
@@ -72,11 +78,14 @@ function Play() {
 
   return (
     <div className="play-page">
-      {/* 顶部浮动栏：退出按钮 + 游戏标题 + Remix 按钮 */}
+      {/* 顶部浮动栏：退出按钮 + 游戏标题 + Remix 按钮 + 删除按钮 */}
       <div className="top-bar">
         <button className="close-btn" onClick={() => navigate('/gallery')}>✕</button>
         <h1 className="game-title">{work.title}</h1>
-        <button className="remix-btn" onClick={() => setShowRemixModal(true)}>🔄 Remix</button>
+        <div className="top-bar-buttons">
+          <button className="remix-btn" onClick={() => setShowRemixModal(true)}>🔄 Remix</button>
+          <button className="delete-btn" onClick={() => setShowDeleteModal(true)}>🗑️ 删除</button>
+        </div>
       </div>
       <RemixModal
         isOpen={showRemixModal}
@@ -93,6 +102,23 @@ function Play() {
           sandbox="allow-scripts allow-same-origin"
         />
       </div>
+
+      {/* 删除确认弹窗 */}
+      {showDeleteModal && (
+        <div className="delete-modal-overlay">
+          <div className="delete-modal">
+            <h3 className="modal-title">确认删除这个作品吗？</h3>
+            <div className="modal-buttons">
+              <button className="modal-btn cancel" onClick={() => setShowDeleteModal(false)}>
+                取消
+              </button>
+              <button className="modal-btn confirm" onClick={handleDeleteConfirm}>
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
