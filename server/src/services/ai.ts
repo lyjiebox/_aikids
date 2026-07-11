@@ -55,6 +55,8 @@ export interface GameGenerationRequest {
   templateId?: string;          // 模板 ID（可选）
   userPrompt: string;           // 用户语音/文字输入
   ageRange?: [number, number];  // 目标年龄段
+  remixFrom?: string;           // Remix: 来源作品 ID
+  remixInstruction?: string;    // Remix: 用户的改编指令
 }
 
 // ============================================================
@@ -81,9 +83,14 @@ export async function generateGameWithAI(req: GameGenerationRequest): Promise<Ga
     userPrompt = TEMPLATE_HINTS[req.templateId] + '。' + userPrompt;
   }
 
+  // 拼接 Remix 指令
+  if (req.remixFrom && req.remixInstruction) {
+    userPrompt = `【改编请求】基于原始游戏「${req.userPrompt}」进行改编。用户改编要求：${req.remixInstruction}。请保留原游戏核心玩法，根据改编要求进行修改。`;
+  }
+
   // 1. 火山引擎 Responses API — 优先使用（需同时配置 Key 与接入点 ID）
   if (process.env.VOLCENGINE_API_KEY && process.env.VOLCENGINE_ENDPOINT_ID) {
-    return await callVolcengineResponses(
+    return await callVolcengineChat(
       process.env.VOLCENGINE_API_KEY,
       process.env.VOLCENGINE_ENDPOINT_ID,
       userPrompt
@@ -104,13 +111,13 @@ export async function generateGameWithAI(req: GameGenerationRequest): Promise<Ga
 }
 
 /**
- * 调用火山引擎 Agent Plan（Responses API）
+ * 调用火山引擎（Chat Completions API）
  * 
- * 使用 Agent Plan 订阅的预付费额度，不额外计费。
+ * 使用标准 Chat Completions 接口，兼容豆包/DeepSeek/GLM 等多模型。
  * API 文档：https://www.volcengine.com/docs/82379
  */
-async function callVolcengineResponses(apiKey: string, endpointId: string, userPrompt: string): Promise<GameGenerationResult> {
-  const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
+async function callVolcengineChat(apiKey: string, endpointId: string, userPrompt: string): Promise<GameGenerationResult> {
+  const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -118,29 +125,25 @@ async function callVolcengineResponses(apiKey: string, endpointId: string, userP
     },
     body: JSON.stringify({
       model: endpointId,
-      input: [
-        { role: 'system', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
-        { role: 'user', content: [{ type: 'input_text', text: userPrompt }] }
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt }
       ],
-      max_output_tokens: 4096
+      max_tokens: 4096,
+      temperature: 0.7
     })
   });
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`火山引擎 Responses API 失败 (${response.status}): ${errText}`);
+    throw new Error(`火山引擎 Chat API 失败 (${response.status}): ${errText}`);
   }
 
   const data = await response.json();
 
-  // Responses API 响应格式：output[] 中包含 reasoning + message
-  const assistantOutput = data.output?.find(
-    (item: any) => item.type === 'message' && item.role === 'assistant'
-  );
-  if (!assistantOutput) throw new Error('Responses API 未返回 assistant 消息');
-
-  const text = assistantOutput.content?.find((c: any) => c.type === 'output_text')?.text;
-  if (!text) throw new Error('Responses API 未返回文本内容');
+  // Chat Completions 响应格式：choices[0].message.content
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error('火山引擎 Chat API 未返回文本内容');
 
   return parseGameOutput(text);
 }

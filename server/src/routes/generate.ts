@@ -114,7 +114,7 @@ generateRoute.post("/", async (c) => {
     const body = (await c.req.json()) as GenerateRequest;
     const { templateId, userPrompt, remixFrom, remixInstruction } = body;
     
-    console.log('生成游戏请求:', { templateId, userPrompt: userPrompt?.slice(0, 50) });
+    console.log('生成游戏请求:', { templateId, userPrompt: userPrompt?.slice(0, 50), remixFrom, remixInstruction: remixInstruction?.slice(0, 50) });
     
     // 检查是否配置了 AI API Key
     const hasVolcengine = process.env.VOLCENGINE_API_KEY && process.env.VOLCENGINE_ENDPOINT_ID;
@@ -125,7 +125,7 @@ generateRoute.post("/", async (c) => {
     if (hasApiKey) {
       try {
         const { generateGameWithAI } = await import('../services/ai');
-        game = await generateGameWithAI({ templateId, userPrompt, ageRange: [3, 10] });
+        game = await generateGameWithAI({ templateId, userPrompt, ageRange: [3, 10], remixFrom, remixInstruction });
         console.log('AI 游戏生成成功');
       } catch (aiError) {
         console.warn('AI 生成失败，使用 Mock 兜底:', aiError);
