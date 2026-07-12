@@ -5,28 +5,24 @@
  * 
  * 这是部署在 Vercel 上的后端 API，负责：
  * 1. 接收前端的游戏生成请求（模板ID + 用户语音/文字输入）
- * 2. 调用火山引擎 Agent Plan Responses API 生成 HTML5 儿童游戏
- * 3. AI 调用失败时降级到本地 Mock 游戏模板
- * 4. 返回游戏 HTML 代码 + 引擎标识（volcengine/mock）
+ * 2. 调用火山引擎 Chat Completions API 生成 HTML5 儿童游戏
+ * 3. 支持 DeepSeek V4 Pro 和 Doubao Seed 2.0 Pro 双模型切换
+ * 4. AI 调用失败时降级到本地 Mock 游戏模板
+ * 5. 返回游戏 HTML 代码 + 引擎标识（volcengine/mock）+ 模型名
  * 
  * 依赖的环境变量（在 Vercel Settings 中配置）：
- *   VOLCENGINE_API_KEY      — 火山引擎 API Key
- *   VOLCENGINE_ENDPOINT_ID  — 推理接入点 ID（ep-xxx）
+ *   VOLCENGINE_API_KEY       - 火山引擎 API Key（两个模型共用）
+ *   DEEPSEEK_ENDPOINT_ID     - DeepSeek V4 Pro 推理接入点 ID（ep-xxx）
+ *   DOUBAO_ENDPOINT_ID       - Doubao Seed 2.0 Pro 推理接入点 ID（ep-xxx）
+ *   GAME_MODEL               - 默认模型选择：deepseek | doubao（可选，默认 doubao）
  * 
  * 超时配置：vercel.json 中 maxDuration 设为 300 秒（5 分钟）
- * （火山引擎生成完整 HTML5 游戏通常需要 1-3 分钟）
  */
 import { Hono } from 'hono';
 
 // ============================================================
-// AI System Prompt — 告诉 AI 怎么生成儿童游戏
+// AI System Prompt - 告诉 AI 怎么生成儿童游戏
 // ============================================================
-// 这段 Prompt 是整个项目的核心，定义了 AI 生成游戏的规则：
-// - 面向 3-10 岁儿童
-// - 单文件 HTML（内联 CSS + JS）
-// - 安全限制（禁止 iframe/form/eval 等）
-// - 输出 JSON 格式 { title, html }
-
 const SYSTEM_PROMPT = `你是一个儿童游戏生成专家。你必须生成一个完整、可玩的 HTML5 游戏。
 
 ## 必须遵循的规则
@@ -46,25 +42,65 @@ const SYSTEM_PROMPT = `你是一个儿童游戏生成专家。你必须生成一
   "html": "完整的 HTML5 游戏代码"
 }`;
 
+// ============================================================
+// 模型配置
+// ============================================================
+
+/** 支持的模型标识 */
+type ModelType = 'deepseek' | 'doubao';
+
+/** 模型显示名映射 */
+const MODEL_NAMES: Record<ModelType, string> = {
+  deepseek: 'DeepSeek V4 Pro',
+  doubao: 'Doubao Seed 2.0 Pro',
+};
+
 /**
- * 调用火山引擎 Agent Plan Responses API 生成游戏
+ * 根据模型类型获取对应的 endpoint ID
+ */
+function getEndpointId(model: ModelType): string | undefined {
+  if (model === 'deepseek') return process.env.DEEPSEEK_ENDPOINT_ID;
+  if (model === 'doubao') return process.env.DOUBAO_ENDPOINT_ID;
+  return undefined;
+}
+
+/**
+ * 获取已配置的模型列表（至少配了 endpoint 才算可用）
+ */
+function getAvailableModels(): ModelType[] {
+  const models: ModelType[] = [];
+  if (process.env.DOUBAO_ENDPOINT_ID) models.push('doubao');
+  if (process.env.DEEPSEEK_ENDPOINT_ID) models.push('deepseek');
+  return models;
+}
+
+// ============================================================
+// 核心AI调用 - Chat Completions API
+// ============================================================
+
+/**
+ * 调用火山引擎 Chat Completions API 生成游戏
  * 
- * 这是核心 AI 调用函数，消耗你订阅的 Agent Plan 预付费额度。
+ * 统一使用 Chat Completions 接口，兼容 DeepSeek 和 Doubao 模型。
  * 
  * @param userPrompt 用户的语音/文字输入（已拼接模板提示前缀）
+ * @param model 模型类型：deepseek | doubao
  * @returns { title: 游戏标题, html: 完整 HTML 代码 }
- * 
- * API 文档：https://www.volcengine.com/docs/82379（Responses API）
  */
-async function callVolcengineAI(userPrompt: string): Promise<{ title: string; html: string }> {
+async function callVolcengineAI(
+  userPrompt: string,
+  model: ModelType
+): Promise<{ title: string; html: string }> {
   const apiKey = process.env.VOLCENGINE_API_KEY;
-  const endpointId = process.env.VOLCENGINE_ENDPOINT_ID;
+  const endpointId = getEndpointId(model);
 
   if (!apiKey || !endpointId) {
-    throw new Error('缺少 VOLCENGINE_API_KEY 或 VOLCENGINE_ENDPOINT_ID');
+    throw new Error(`模型 ${MODEL_NAMES[model]} 未配置完整（需要 VOLCENGINE_API_KEY 和 endpoint ID）`);
   }
 
-  const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
+  console.log(`[generate] 调用 ${MODEL_NAMES[model]}, endpoint: ${endpointId.slice(0, 8)}...`);
+
+  const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -72,40 +108,41 @@ async function callVolcengineAI(userPrompt: string): Promise<{ title: string; ht
     },
     body: JSON.stringify({
       model: endpointId,
-      input: [
-        { role: 'system', content: [{ type: 'input_text', text: SYSTEM_PROMPT }] },
-        { role: 'user', content: [{ type: 'input_text', text: userPrompt }] }
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt }
       ],
-      max_output_tokens: 8192
+      max_tokens: 8192,
+      temperature: 0.7
     })
   });
 
   // 检查 HTTP 状态码
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`火山引擎 API 失败 (${response.status}): ${errText}`);
+    throw new Error(`${MODEL_NAMES[model]} API 失败 (${response.status}): ${errText}`);
   }
 
   const data = await response.json();
 
-  // Responses API 的响应格式和 Chat Completions 不同：
-  // output[] 是一个数组，包含 reasoning（思考过程）和 message（回复）
-  // 我们需要找到 role=assistant 的 message
-  const assistantOutput = data.output?.find(
-    (item: any) => item.type === 'message' && item.role === 'assistant'
-  );
-  if (!assistantOutput) throw new Error('API 未返回 assistant 消息');
-
-  // 从 assistant 消息中提取文本内容
-  const text = assistantOutput.content?.find((c: any) => c.type === 'output_text')?.text;
-  if (!text) throw new Error('API 未返回文本内容');
+  // Chat Completions 响应格式：choices[0].message.content
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error(`${MODEL_NAMES[model]} 未返回文本内容`);
 
   // 打印 AI 原始输出（前 500 字符），方便调试解析失败
-  console.log('[generate] AI 原始输出 (前500字符):', text.slice(0, 500));
+  console.log(`[generate] ${MODEL_NAMES[model]} 原始输出 (前500字符):`, text.slice(0, 500));
 
-  // 解析 AI 返回的 JSON（AI 应该返回 { title, html }）
+  // 打印实际返回的模型名（用于验证 endpoint 绑定正确）
+  if (data.model) {
+    console.log(`[generate] 实际模型: ${data.model}`);
+  }
+
   return parseGameOutput(text);
 }
+
+// ============================================================
+// 输出解析
+// ============================================================
 
 /**
  * 解析 AI 输出的文本，提取 JSON 游戏数据
@@ -135,15 +172,14 @@ function parseGameOutput(text: string): { title: string; html: string } {
   }
 
   // 策略 4：JSON 被截断时，尝试用正则提取 title 和 html
-  // 匹配 "title": "..." 和 "html": "..."（即使 JSON 不完整）
   const titleMatch = text.match(/"title"\s*:\s*"([^"]*)"/);
   const htmlMatch = text.match(/"html"\s*:\s*"([\s\S]*?)(?:"\s*\}|$)/);
   if (titleMatch && htmlMatch) {
     let html = htmlMatch[1]
-      .replace(/\\n/g, '\n')   // 反转义换行
-      .replace(/\\"/g, '"')    // 反转义引号
-      .replace(/\\t/g, '\t')   // 反转义制表符
-      .replace(/\\\\/g, '\\'); // 反转义反斜杠
+      .replace(/\\n/g, '\n')
+      .replace(/\\"/g, '"')
+      .replace(/\\t/g, '\t')
+      .replace(/\\\\/g, '\\');
     console.log('[generate] ⚠️ JSON 不完整，通过正则提取了 title 和 html');
     return { title: titleMatch[1], html };
   }
@@ -163,10 +199,8 @@ function parseGameOutput(text: string): { title: string; html: string } {
 }
 
 // ============================================================
-// Mock 兜底 — AI 不可用时的本地备用游戏
+// Mock 兜底 - AI 不可用时的本地备用游戏
 // ============================================================
-// 当火山引擎 API 调用失败或未配置 API Key 时，
-// 返回这两个预设的简单游戏，确保用户始终能得到一个可玩的游戏。
 
 /**
  * 生成本地 Mock 游戏
@@ -243,15 +277,13 @@ function generateMockGame(_prompt: string, templateId?: string) {
     }
   ];
   
-  // 根据模板 ID 返回对应主题的游戏
-  if (templateId === 'animal') return games[0];  // 动物 → 兔子
-  if (templateId === 'space') return games[1];   // 太空 → 火箭
-  // 没有匹配的模板时随机返回一个
+  if (templateId === 'animal') return games[0];
+  if (templateId === 'space') return games[1];
   return games[Math.floor(Math.random() * games.length)];
 }
 
 // ============================================================
-// 模板提示前缀 — 根据用户选择的模板增强 Prompt
+// 模板提示前缀
 // ============================================================
 const TEMPLATE_HINTS: Record<string, string> = {
   'animal': '这是一个关于动物的游戏',
@@ -262,7 +294,7 @@ const TEMPLATE_HINTS: Record<string, string> = {
 };
 
 // ============================================================
-// Hono 路由处理 — 接收前端请求，返回游戏
+// Hono 路由处理
 // ============================================================
 
 const app = new Hono();
@@ -270,26 +302,31 @@ const app = new Hono();
 /**
  * POST /api/generate
  * 
- * 请求体：{ templateId?: string, userPrompt: string }
- * 响应体：{ success: true, data: { title, gameHtml, engine } }
+ * 请求体：{ templateId?: string, userPrompt: string, model?: 'deepseek'|'doubao', remixFrom?, remixInstruction?, ... }
+ * 响应体：{ success: true, data: { title, gameHtml, engine, model } }
  * 
- * 处理流程：
- * 1. 检查是否配置了 VOLCENGINE_API_KEY
- * 2. 有 Key → 调用火山引擎 AI 生成
- * 3. AI 失败 → 降级到 Mock 本地游戏
- * 4. 无 Key → 直接用 Mock
- * 5. 返回结果 + engine 标识（前端据此显示不同 UI）
+ * 模型选择优先级：
+ * 1. 请求体中的 model 参数（前端动态指定）
+ * 2. 环境变量 GAME_MODEL
+ * 3. 默认 doubao（更快）
+ * 
+ * 如果指定的模型未配置 endpoint，自动降级到另一个已配置的模型。
  */
 app.post('*', async (c) => {
   try {
     const body = await c.req.json();
-    const { templateId, userPrompt, remixFrom, remixInstruction, originalUserPrompt, originalTitle, originalGameHtmlPreview } = body;
+    const { templateId, userPrompt, remixFrom, remixInstruction, originalUserPrompt, originalTitle, originalGameHtmlPreview, model: requestModel } = body;
     
-    console.log('[generate] 请求:', { templateId, prompt: userPrompt?.slice(0, 50), remix: !!remixFrom });
+    console.log('[generate] 请求:', { 
+      templateId, 
+      prompt: userPrompt?.slice(0, 50), 
+      remix: !!remixFrom,
+      model: requestModel 
+    });
 
+    // 拼接最终 Prompt
     let finalPrompt = userPrompt;
     if (remixFrom && remixInstruction) {
-      // Remix 模式：拼接原始游戏信息 + 改编想法
       finalPrompt = `
 原始游戏信息：
 - 原始用户描述：${originalUserPrompt || ''}
@@ -301,40 +338,56 @@ app.post('*', async (c) => {
 请根据原始游戏和改编想法，生成一个完整的新游戏。新游戏应体现用户的改编意图，同时保持适合 3-10 岁儿童的简洁玩法。
 `;
     } else if (templateId && TEMPLATE_HINTS[templateId]) {
-      // 普通创作模式：拼接模板提示前缀
       finalPrompt = TEMPLATE_HINTS[templateId] + '。' + userPrompt;
     }
 
+    // 确定使用哪个模型
+    const availableModels = getAvailableModels();
+    let model: ModelType | undefined;
+
+    if (availableModels.length === 0) {
+      // 没有配置任何 endpoint，直接 Mock
+      console.log('[generate] 未配置任何模型 endpoint，使用 Mock');
+      const game = generateMockGame(userPrompt, templateId);
+      return c.json({
+        success: true,
+        data: { title: game.title, gameHtml: game.html, engine: 'mock', model: 'none' }
+      });
+    }
+
+    // 优先用请求参数，其次环境变量，最后默认 doubao
+    const preferredModel = (requestModel as ModelType) || (process.env.GAME_MODEL as ModelType) || 'doubao';
+
+    if (availableModels.includes(preferredModel)) {
+      model = preferredModel;
+    } else {
+      // 指定模型未配置，降级到第一个可用的
+      model = availableModels[0];
+      console.log(`[generate] ⚠️ 指定模型 ${preferredModel} 未配置，降级到 ${MODEL_NAMES[model]}`);
+    }
+
+    console.log(`[generate] 使用模型: ${MODEL_NAMES[model]}`);
+
+    // 调用 AI 生成
     let game;
     let engine: 'volcengine' | 'mock' = 'mock';
 
-    // 尝试火山引擎 AI 生成（需同时配置 Key 与接入点 ID）
-    if (process.env.VOLCENGINE_API_KEY && process.env.VOLCENGINE_ENDPOINT_ID) {
-      try {
-        console.log('[generate] 调用火山引擎 Responses API, endpoint:', process.env.VOLCENGINE_ENDPOINT_ID.slice(0, 8) + '...');
-        game = await callVolcengineAI(finalPrompt);
-        engine = 'volcengine';
-        console.log('[generate] ✅ AI 生成成功:', game.title);
-      } catch (aiError: any) {
-        console.warn('[generate] ⚠️ AI 失败，降级 Mock:', aiError.message);
-        game = generateMockGame(userPrompt, templateId);
-      }
-    } else {
-      const missing = [
-        !process.env.VOLCENGINE_API_KEY && 'VOLCENGINE_API_KEY',
-        !process.env.VOLCENGINE_ENDPOINT_ID && 'VOLCENGINE_ENDPOINT_ID',
-      ].filter(Boolean);
-      console.log('[generate] 火山引擎未配置完整，缺少:', missing.join(', '), '→ 使用 Mock');
+    try {
+      game = await callVolcengineAI(finalPrompt, model);
+      engine = 'volcengine';
+      console.log(`[generate] ✅ ${MODEL_NAMES[model]} 生成成功:`, game.title);
+    } catch (aiError: any) {
+      console.warn(`[generate] ⚠️ ${MODEL_NAMES[model]} 失败，降级 Mock:`, aiError.message);
       game = generateMockGame(userPrompt, templateId);
     }
 
-    // 返回结果，engine 字段告诉前端用了哪个引擎
     return c.json({
       success: true,
       data: {
         title: game.title,
         gameHtml: game.html,
-        engine,  // ← 告诉前端用了哪个引擎
+        engine,
+        model: engine === 'volcengine' ? model : 'mock',
       }
     });
   } catch (error) {
@@ -346,5 +399,5 @@ app.post('*', async (c) => {
   }
 });
 
-/** Vercel 要求使用命名 HTTP 方法导出，否则 Response 会被忽略导致超时 */
+/** Vercel 要求使用命名 HTTP 方法导出 */
 export const POST = (request: Request) => app.fetch(request);
