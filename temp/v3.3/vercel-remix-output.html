@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>彩虹收集小游戏</title>
+  <style>
+    body { margin:0; background:linear-gradient(#87ceeb,#e0f7ff); min-height:100vh; display:flex; align-items:center; justify-content:center; font-family:system-ui,sans-serif; }
+    #score { position:fixed; top:16px; left:16px; font-size:26px; font-weight:bold; color:#fff; text-shadow:0 2px 4px rgba(0,0,0,.25); }
+    #target { font-size:88px; cursor:pointer; user-select:none; position:absolute; }
+    #hint { position:fixed; bottom:20px; color:#fff; font-size:15px; }
+    #over { position:fixed; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; background:rgba(0,0,0,.55); color:#fff; }
+  </style>
+</head>
+<body>
+  <div id="score">得分：0</div>
+  <div id="target">🌈</div>
+  <div id="hint">点击彩虹得分，点到闪电扣分，收集8道彩虹胜利，30秒内没收集完就失败</div>
+  <div id="over"><h1 id="result">胜利！</h1><button id="restart">再玩一次</button></div>
+  <!-- SFX: collect -->
+  <!-- SFX: hit -->
+  <script>
+    let score = 0;
+    let timeLeft = 30;
+    let playing = true;
+    const target = document.getElementById('target');
+    const scoreEl = document.getElementById('score');
+    const overEl = document.getElementById('over');
+    const resultEl = document.getElementById('result');
+
+    function moveTarget() {
+      if (!playing) return;
+      const x = Math.random() * 80 + 10;
+      const y = Math.random() * 70 + 10;
+      target.style.left = x + '%';
+      target.style.top = y + '%';
+      target.textContent = Math.random() > 0.3 ? '🌈' : '⚡';
+    }
+
+    function endGame(win) {
+      if (!playing) return;
+      playing = false;
+      resultEl.textContent = win ? '胜利！' : '失败！';
+      overEl.style.display = 'flex';
+    }
+
+    target.addEventListener('click', () => {
+      if (!playing) return;
+      if (target.textContent === '🌈') {
+        // <!-- SFX: collect -->
+        score += 1;
+        scoreEl.textContent = '得分：' + score;
+        target.style.transform = 'scale(.85)';
+        setTimeout(() => { target.style.transform = ''; }, 120);
+        if (score >= 8) endGame(true);
+      } else {
+        // <!-- SFX: hit -->
+        score = Math.max(0, score - 1);
+        scoreEl.textContent = '得分：' + score;
+        target.style.transform = 'scale(1.2) rotate(10deg)';
+        setTimeout(() => { target.style.transform = ''; }, 120);
+      }
+      moveTarget();
+    });
+
+    setInterval(() => {
+      if (!playing) return;
+      timeLeft -= 1;
+      if (timeLeft <= 0) endGame(false);
+    }, 1000);
+
+    setInterval(moveTarget, 1500);
+    moveTarget();
+
+    document.getElementById('restart').addEventListener('click', () => {
+      score = 0; timeLeft = 30; playing = true;
+      scoreEl.textContent = '得分：0';
+      overEl.style.display = 'none';
+      moveTarget();
+    });
+  </script>
+</body>
+</html>

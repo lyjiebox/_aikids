@@ -3,7 +3,7 @@
 > 版本：v3.3
 > 日期：2026-10-19
 > 对应文档：`docs/uat-v3.3.md`、`docs/design-v3.3.md`
-> 结论：**本地验收通过，待 Vercel 线上验收**
+> 结论：**本地与 Vercel 线上验收全部通过**
 
 ---
 
@@ -32,7 +32,9 @@
 | 前端 UI（CDP） | 21 | 21 | 0 | ✅ |
 | 真实模型 Remix | 5 | 5 | 0 | ✅ |
 | 真实模型输出可玩性 | 1 | 1 | 0 | ✅ |
-| Vercel 线上 | 4 | 0 | 0 | ⏳ 待部署后执行 |
+| Vercel 线上 API | 9 | 9 | 0 | ✅ |
+| Vercel 线上 UI | 7 | 7 | 0 | ✅ |
+| 线上 Remix 输出可玩性 | 1 | 1 | 0 | ✅ |
 
 ---
 
@@ -150,16 +152,71 @@ node temp/v3.3/real-remix-check.mjs
 
 > 前 3 个是产品代码问题，均已修复并回归；第 4 个是测试桩问题。
 
+### 3.7 Vercel 线上（真实模型）
+
+部署信息：
+
+- GitHub 提交：`0b6df55 feat(v3.3): Remix 基于原游戏完整源码与结构档案做增量改编`
+- 线上资源：`/assets/index-B7Lm2dwN.js`
+- 部署确认：线上 JS 已包含「基于《」「保留原玩法」「不会重新生成一个完全不同的游戏」
+
+API 验收：
+
+```bash
+node temp/v3.3/vercel-remix-check.mjs
+# ===== 线上 Vercel：9/9 通过，0 失败 =====
+```
+
+| 用例 | 结果 |
+|------|------|
+| 线上页面 / JS 资源 | 200，新资源已生效 |
+| 线上 Remix | 200，耗时 49.9s，`remixMode=full`，输出 2,887 字节 |
+| 结构审计 | render/interactions/score/winLose 全部保留，`preserved=true`，`changed=true` |
+| 指令落实 | 云朵 → 🌈 彩虹，新增 ⚡ 闪电扣分逻辑 |
+| 普通生成回归 | 成功，响应不含 Remix 字段 |
+| Key 安全 | 响应无 `apiKey` / `sk-` |
+
+UI 验收：
+
+```bash
+node temp/v3.3/vercel-ui-check.mjs
+# ===== 线上 UI：7/7 通过，0 失败 =====
+```
+
+| 用例 | 结果 |
+|------|------|
+| 线上 Remix 弹窗 | 展示「基于《云朵收集小游戏》改编」与保留标签 |
+| 线上生成保存 | 作品数 2，`remixMode=full`，`remixAudit.preserved=true` |
+| 指令落实 | 输出含 🌈/彩虹、⚡/闪电与得分逻辑 |
+| 播放页标识 | 「改编自《云朵收集小游戏》· 已保留原玩法」 |
+| 作品列表 | 「改编自 云朵收集小游戏」「🧬 保留原玩法」 |
+
+线上输出可玩性：
+
+```bash
+FILE=temp/v3.3/vercel-remix-output.html EXPECT_TARGET=🌈 \
+  node temp/v3.3/real-remix-browser-check.mjs
+# passed: true，无 JS 异常，点击后得分 0 → 1
+```
+
+> 线上模型将标题改为「彩虹收集小游戏」，因此 `titlePreserved=false`；渲染、交互、得分、胜负均保留，符合「只改要求部分」的结构保真目标。
+
+线上截图：
+
+- `temp/v3.3/vercel-remix-modal.png`
+- `temp/v3.3/vercel-remix-play.png`
+
 ---
 
-## 5. 待执行
+## 5. 交付检查
 
-- [ ] 提交 GitHub
-- [ ] 等待 Vercel 自动部署
-- [ ] 线上 `/api/generate` Remix 验收
-- [ ] 线上 UI Remix 验收
-- [ ] 线上普通生成回归
-- [ ] 将线上结果补充到本报告
+- [x] 提交 GitHub（`0b6df55`）
+- [x] 等待 Vercel 自动部署（新资源 `index-B7Lm2dwN.js`）
+- [x] 线上 `/api/generate` Remix 验收（9/9）
+- [x] 线上 UI Remix 验收（7/7）
+- [x] 线上普通生成回归
+- [x] 线上 Remix 输出可玩性
+- [x] 将线上结果补充到本报告
 
 ---
 
@@ -175,6 +232,11 @@ node temp/v3.3/real-remix-check.mjs
 | `temp/v3.3/ui-remix-uat.mjs` | UI 自动化验收 |
 | `temp/v3.3/real-remix-check.mjs` | 真实模型验收 |
 | `temp/v3.3/real-remix-browser-check.mjs` | 真实输出可玩性检查 |
-| `temp/v3.3/real-remix-output.html` | 真实模型输出证据 |
+| `temp/v3.3/real-remix-output.html` | 本地真实模型输出证据 |
+| `temp/v3.3/vercel-remix-check.mjs` | 线上 API 验收 |
+| `temp/v3.3/vercel-ui-check.mjs` | 线上 UI 验收 |
+| `temp/v3.3/vercel-remix-output.html` | 线上模型输出证据 |
+| `temp/v3.3/vercel-remix-modal.png` | 线上 Remix 弹窗截图 |
+| `temp/v3.3/vercel-remix-play.png` | 线上改编作品播放页截图 |
 | `temp/v3.3/esbuild-check/` | Vercel 产物（gitignore） |
 | `temp/v3.3/chrome-profile/` | Chrome 临时配置（gitignore） |

@@ -12,8 +12,9 @@ import { pathToFileURL } from 'node:url';
 
 const CDP = process.env.CDP || 'http://127.0.0.1:9333';
 const fileUrl = pathToFileURL(
-  resolve('temp/v3.3/real-remix-output.html')
+  resolve(process.env.FILE || 'temp/v3.3/real-remix-output.html')
 ).href;
+const expectedTarget = process.env.EXPECT_TARGET || '💎';
 
 let ws;
 let nextId = 0;
@@ -106,7 +107,7 @@ async function main() {
   const passed =
     initial.hasScore &&
     initial.hasScript &&
-    initial.target.includes('💎') &&
+    initial.target.includes(expectedTarget) &&
     clickResult.ok &&
     /得分：1|得分: 1|1/.test(after.score) &&
     exceptions.length === 0;
