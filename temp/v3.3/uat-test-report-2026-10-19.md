@@ -157,7 +157,7 @@ node temp/v3.3/real-remix-check.mjs
 部署信息：
 
 - GitHub 提交：`0b6df55 feat(v3.3): Remix 基于原游戏完整源码与结构档案做增量改编`
-- 线上资源：`/assets/index-B7Lm2dwN.js`
+- 线上资源：`/assets/index-BrX-Qvh9.js`、`/assets/index-BzZ_yHXf.css`
 - 部署确认：线上 JS 已包含「基于《」「保留原玩法」「不会重新生成一个完全不同的游戏」
 
 API 验收：
@@ -169,7 +169,7 @@ node temp/v3.3/vercel-remix-check.mjs
 
 | 用例 | 结果 |
 |------|------|
-| 线上页面 / JS 资源 | 200，新资源已生效 |
+| 线上页面 / JS / CSS 资源 | 200，新资源已生效（含加宽后的改编来源徽标） |
 | 线上 Remix | 200，耗时 49.9s，`remixMode=full`，输出 2,887 字节 |
 | 结构审计 | render/interactions/score/winLose 全部保留，`preserved=true`，`changed=true` |
 | 指令落实 | 云朵 → 🌈 彩虹，新增 ⚡ 闪电扣分逻辑 |
