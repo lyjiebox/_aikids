@@ -79,3 +79,88 @@
   background: linear-gradient(135deg, #7c4dff, #536dfe);
   color: #fff;
 }
+
+/* V3.3：原游戏信息与保留标签 */
+.remix-modal-source {
+  background: linear-gradient(135deg, #f3edff, #e8f0ff);
+  border-radius: 18px;
+  padding: 14px 16px;
+  margin: 0 0 18px;
+}
+
+.remix-modal-source-title {
+  font-size: 17px;
+  font-weight: bold;
+  color: #4a2fb3;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.remix-modal-preserve {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.remix-modal-preserve-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.remix-modal-chip {
+  font-size: 13px;
+  color: #4a2fb3;
+  background: #fff;
+  border-radius: 999px;
+  padding: 3px 10px;
+  box-shadow: 0 1px 3px rgba(76, 43, 179, 0.12);
+}
+
+.remix-modal-source-hint {
+  font-size: 13px;
+  color: #777;
+  text-align: center;
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+.remix-quick-ideas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.remix-quick-idea {
+  border: 2px solid #e6e0ff;
+  background: #faf8ff;
+  color: #5b3fd6;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.remix-quick-idea:active {
+  transform: scale(0.97);
+  background: #efeaff;
+}
+
+@media (max-width: 480px) {
+  .remix-modal-card {
+    padding: 22px;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+
+  .remix-modal-title {
+    font-size: 21px;
+  }
+
+  .remix-modal-btn {
+    font-size: 16px;
+    padding: 13px 10px;
+  }
+}

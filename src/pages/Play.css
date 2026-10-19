@@ -38,6 +38,32 @@
   margin: 0;
 }
 
+/* V3.3：标题 + 改编来源 */
+.game-title-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 220px;
+}
+
+.game-title-wrap .game-title {
+  max-width: 220px;
+}
+
+.play-remix-badge {
+  font-size: 11px;
+  color: #e9e2ff;
+  background: rgba(76, 43, 179, 0.55);
+  border-radius: 999px;
+  padding: 2px 10px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .top-bar-buttons {
   display: flex;
   gap: 8px;

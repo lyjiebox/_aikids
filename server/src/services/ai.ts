@@ -20,6 +20,13 @@ import {
   type ResolvedModel,
   type ModelSource,
 } from './model';
+import {
+  auditRemixOutput,
+  buildRemixPrompt,
+  type GameProfile,
+  type RemixAudit,
+  type RemixSourceMode,
+} from './remix';
 
 // ============================================================
 // System Prompt — 告诉 AI 如何生成儿童游戏
@@ -59,6 +66,12 @@ export interface GameGenerationResult extends ParsedGame {
   modelName: string;
   modelSource: ModelSource;
   engine: 'volcengine';
+  /** V3.3：Remix 源码模式 */
+  remixMode?: RemixSourceMode;
+  /** V3.3：原游戏档案 */
+  remixProfile?: GameProfile;
+  /** V3.3：改编结果审计 */
+  remixAudit?: RemixAudit;
 }
 
 /** 游戏生成请求参数 */
@@ -68,6 +81,10 @@ export interface GameGenerationRequest {
   ageRange?: [number, number];  // 目标年龄段
   remixFrom?: string;           // Remix: 来源作品 ID
   remixInstruction?: string;    // Remix: 用户的改编指令
+  originalGameHtml?: string;        // V3.3: 原游戏完整 HTML
+  originalGameHtmlPreview?: string; // V3.3: 旧客户端片段
+  originalTitle?: string;           // V3.3: 原标题
+  originalUserPrompt?: string;      // V3.3: 原创作描述
   modelId?: string;             // 内置模型 ID
   model?: string;               // 兼容旧字段
   modelConfig?: unknown;        // 自定义模型配置
@@ -94,29 +111,50 @@ export async function generateGameWithAI(
   req: GameGenerationRequest,
   model: ResolvedModel
 ): Promise<GameGenerationResult> {
-  // 拼接模板提示前缀
+  const isRemix = Boolean(req.remixFrom && req.remixInstruction);
+
+  // V3.3 Remix：注入原游戏档案 + 完整源码/摘要 + 专用规则
+  const remix = isRemix
+    ? buildRemixPrompt({
+        templateId: req.templateId,
+        originalTitle: req.originalTitle,
+        originalUserPrompt: req.originalUserPrompt,
+        originalGameHtml: req.originalGameHtml,
+        originalGameHtmlPreview: req.originalGameHtmlPreview,
+        remixInstruction: req.remixInstruction || '',
+      })
+    : null;
+
+  // 普通创作：保持 V3.1/V3.2 的模板前缀行为
   let userPrompt = req.userPrompt;
-  if (req.templateId && TEMPLATE_HINTS[req.templateId]) {
+  if (!remix && req.templateId && TEMPLATE_HINTS[req.templateId]) {
     userPrompt = TEMPLATE_HINTS[req.templateId] + '。' + userPrompt;
   }
-
-  // 拼接 Remix 指令
-  if (req.remixFrom && req.remixInstruction) {
-    userPrompt = `【改编请求】基于原始游戏「${req.userPrompt}」进行改编。用户改编要求：${req.remixInstruction}。请保留原游戏核心玩法，根据改编要求进行修改。`;
+  if (remix) {
+    userPrompt = remix.userPrompt;
   }
+
+  const systemPrompt = remix
+    ? `${SYSTEM_PROMPT}\n\n${remix.systemPrompt}`
+    : SYSTEM_PROMPT;
 
   console.log(
     `[ai] 使用模型: ${model.name} (${model.source}), host=${safeHost(model.baseUrl)}`
   );
+  if (remix) {
+    console.log(
+      `[ai] Remix 模式: ${remix.sourceMode}, 原源码 ${remix.profile.charCount} 字符, 注入 ${remix.includedChars} 字符`
+    );
+  }
 
   const { text, latencyMs } = await callChatCompletion(
     model,
     [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ],
     {
-      maxTokens: 8192,
+      maxTokens: remix ? remix.maxTokens : 8192,
       temperature: 0.7,
       timeoutMs: getGenerationTimeoutMs(),
     }
@@ -126,12 +164,31 @@ export async function generateGameWithAI(
 
   const parsed = parseGameOutput(text);
 
+  const remixAudit = remix
+    ? auditRemixOutput(
+        remix.profile,
+        req.originalGameHtml || req.originalGameHtmlPreview || '',
+        parsed.html,
+        parsed.title,
+        remix.sourceMode === 'none' ? undefined : remix.sourceMode
+      )
+    : undefined;
+
+  if (remixAudit) {
+    console.log(
+      `[ai] Remix 审计: preserved=${remixAudit.preserved}, render=${remixAudit.renderPreserved}, interaction=${remixAudit.interactionsPreserved}, score=${remixAudit.scorePreserved}, winLose=${remixAudit.winLosePreserved}`
+    );
+  }
+
   return {
     ...parsed,
     modelId: model.id,
     modelName: model.name,
     modelSource: model.source,
     engine: 'volcengine',
+    remixMode: remix?.sourceMode,
+    remixProfile: remix?.profile,
+    remixAudit,
   };
 }
 

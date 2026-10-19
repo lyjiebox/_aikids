@@ -21,6 +21,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import RemixModal from '../components/RemixModal';
+import { createRemixContext } from '../services/remix';
 import './Play.css';
 
 function Play() {
@@ -30,15 +31,24 @@ function Play() {
   const [showRemixModal, setShowRemixModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // 从作品列表中查找当前作品
+  const work = useMemo(() =>
+    state.works.find(w => w.id === workId),
+    [state.works, workId]
+  );
+
+  // Remix 来源标题：优先作品自身留存，其次当前列表，最后兜底
+  const remixSourceTitle = useMemo(() => {
+    if (!work?.remixFrom) return '';
+    if (work.remixFromTitle) return work.remixFromTitle;
+    const original = state.works.find(w => w.id === work.remixFrom);
+    return original ? original.title : '原游戏';
+  }, [work, state.works]);
+
   const handleRemixConfirm = (instruction) => {
-    const remixContext = {
-      remixFrom: work.id,
-      remixInstruction: instruction,
-      originalTitle: work.title,
-      originalUserPrompt: work.userPrompt,
-      originalGameHtml: work.gameHtml.slice(0, 300),
-      templateId: work.templateId
-    };
+    if (!work) return;
+    // V3.3：透传完整 gameHtml（不再 slice 300 字符），服务端据此分析并保留原框架
+    const remixContext = createRemixContext(work, instruction);
     sessionStorage.setItem('aikids-remix-context', JSON.stringify(remixContext));
     navigate('/create?remix=1');
   };
@@ -47,12 +57,6 @@ function Play() {
     deleteWork(workId);
     navigate('/gallery');
   };
-
-  // 从作品列表中查找当前作品
-  const work = useMemo(() => 
-    state.works.find(w => w.id === workId), 
-    [state.works, workId]
-  );
 
   // 用 ref 防止 React StrictMode 下 useEffect 触发两次
   const countedRef = useRef(false);
@@ -82,7 +86,15 @@ function Play() {
       {/* 顶部浮动栏：退出按钮 + 游戏标题 + Remix 按钮 + 删除按钮 */}
       <div className="top-bar">
         <button className="close-btn" onClick={() => navigate('/gallery')}>✕</button>
-        <h1 className="game-title">{work.title}</h1>
+        <div className="game-title-wrap">
+          <h1 className="game-title">{work.title}</h1>
+          {work.remixFrom && (
+            <span className="play-remix-badge">
+              🔄 改编自《{remixSourceTitle}》
+              {work.remixAudit?.preserved ? ' · 已保留原玩法' : ''}
+            </span>
+          )}
+        </div>
         <div className="top-bar-buttons">
           <button className="remix-btn" onClick={() => setShowRemixModal(true)}>🔄 Remix</button>
           <button className="delete-btn" onClick={() => setShowDeleteModal(true)}>🗑️ 删除</button>
@@ -92,6 +104,7 @@ function Play() {
         isOpen={showRemixModal}
         onClose={() => setShowRemixModal(false)}
         onConfirm={handleRemixConfirm}
+        work={work}
       />
 
       {/* iframe 沙箱运行游戏 */}

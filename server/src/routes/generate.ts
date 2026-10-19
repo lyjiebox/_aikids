@@ -6,6 +6,7 @@ import {
   ModelConfigError,
   resolveRequestModel,
 } from "../services/model";
+import { buildRemixFallback } from "../services/remix";
 
 // 简单的 Mock 游戏生成器（兜底方案）
 function generateMockGame(prompt: string, templateId?: string) {
@@ -132,6 +133,10 @@ generateRoute.post("/", async (c) => {
       userPrompt,
       remixFrom,
       remixInstruction,
+      originalGameHtml,
+      originalGameHtmlPreview,
+      originalTitle,
+      originalUserPrompt,
       modelId,
       model,
       modelConfig,
@@ -169,9 +174,27 @@ generateRoute.post("/", async (c) => {
       throw e;
     }
 
-    // 没有任何可用模型 → Mock 兜底（与旧行为一致）
+    // 没有任何可用模型 → Remix 有原源码时保留原游戏，否则 Mock 兜底
     if (!resolved) {
-      console.log("未配置可用模型，使用 Mock 生成");
+      console.log("未配置可用模型，使用 Remix 保留/旧 Mock 兜底");
+      const fallback = remixFrom
+        ? buildRemixFallback({ originalGameHtml, originalTitle })
+        : null;
+      if (fallback) {
+        return c.json({
+          success: true,
+          data: {
+            gameHtml: fallback.html,
+            title: fallback.title,
+            engine: "mock",
+            model: "mock",
+            modelName: "原游戏",
+            warning: "未配置可用模型，已保留原游戏，未应用本次改编",
+            remixMode: "fallback",
+            remixFallback: true,
+          },
+        } as GenerateResponse);
+      }
       const game = generateMockGame(userPrompt, templateId);
       return c.json({
         success: true,
@@ -193,6 +216,10 @@ generateRoute.post("/", async (c) => {
           ageRange: [3, 10],
           remixFrom,
           remixInstruction,
+          originalGameHtml,
+          originalGameHtmlPreview,
+          originalTitle,
+          originalUserPrompt,
         },
         resolved
       );
@@ -208,6 +235,9 @@ generateRoute.post("/", async (c) => {
           model: game.modelId,
           modelName: game.modelName,
           modelSource: game.modelSource,
+          ...(game.remixMode ? { remixMode: game.remixMode } : {}),
+          ...(game.remixProfile ? { remixProfile: game.remixProfile } : {}),
+          ...(game.remixAudit ? { remixAudit: game.remixAudit } : {}),
         },
       } as GenerateResponse);
     } catch (aiError) {
@@ -215,7 +245,26 @@ generateRoute.post("/", async (c) => {
         aiError instanceof ModelCallError
           ? aiError.message
           : "模型调用失败";
-      console.warn("AI 生成失败，使用 Mock 兜底:", warning);
+      console.warn("AI 生成失败，尝试保留原游戏:", warning);
+
+      const fallback = remixFrom
+        ? buildRemixFallback({ originalGameHtml, originalTitle })
+        : null;
+      if (fallback) {
+        return c.json({
+          success: true,
+          data: {
+            gameHtml: fallback.html,
+            title: fallback.title,
+            engine: "mock",
+            model: "mock",
+            modelName: "原游戏",
+            warning: `${warning}，已保留原游戏，未应用本次改编`,
+            remixMode: "fallback",
+            remixFallback: true,
+          },
+        } as GenerateResponse);
+      }
 
       const game = generateMockGame(userPrompt, templateId);
       return c.json({

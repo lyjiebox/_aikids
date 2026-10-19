@@ -108,6 +108,17 @@
   width: fit-content;
 }
 
+/* V3.3：改编结果保留原玩法 */
+.remix-preserved-tag {
+  font-size: 11px;
+  color: #0b8f6a;
+  background: rgba(0, 184, 148, 0.12);
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+  width: fit-content;
+}
+
 .game-card-title {
   font-size: 15px;
   color: #2d3436;

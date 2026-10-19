@@ -120,7 +120,10 @@ function Create() {
         remixInstruction: ctx.remixInstruction,
         originalUserPrompt: ctx.originalUserPrompt,
         originalTitle: ctx.originalTitle,
-        originalGameHtmlPreview: ctx.originalGameHtml,
+        // V3.3：透传完整原游戏源码；preview 仅用于兼容旧后端
+        originalGameHtml: ctx.originalGameHtml,
+        originalGameHtmlPreview:
+          ctx.originalGameHtmlPreview || (ctx.originalGameHtml || '').slice(0, 500),
         ...getModelParams(),
       });
       const finalEngine = res.data?.engine || 'mock';
@@ -129,6 +132,13 @@ function Create() {
       setFallbackWarning(res.data?.warning || null);
       if (res.success && res.data) {
         if (timerRef.current) clearInterval(timerRef.current);
+        // V3.3：模型不可用时后端保留原游戏；不新增重复作品，直接回到原作品
+        if (res.data.remixFallback) {
+          setIsGenerating(false);
+          alert(res.data.warning || 'AI 暂时不可用，已保留原游戏');
+          navigate(`/play/${ctx.remixFrom}`);
+          return;
+        }
         const generationTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
         const work = {
           id: Date.now().toString(),
@@ -145,6 +155,10 @@ function Create() {
           generationTime,
           remixFrom: ctx.remixFrom,
           remixInstruction: ctx.remixInstruction,
+          remixFromTitle: ctx.originalTitle || null,
+          remixMode: res.data.remixMode || null,
+          remixProfile: res.data.remixProfile || null,
+          remixAudit: res.data.remixAudit || null,
           remixCount: 0
         };
         addWork(work);
@@ -261,12 +275,18 @@ function Create() {
   if (isGenerating || step === 3) {
     // 根据 engine 状态显示不同文案
     let loadingText = '🎨 正在生成游戏...';
-    if (engine === 'pending') {
+    if (remixContext) {
+      // V3.3：Remix 明确告知「基于原游戏修改」
+      loadingText =
+        engine === 'pending'
+          ? `🔄 正在读取《${remixContext.originalTitle || '原游戏'}》并连接 ${currentModelLabel}...`
+          : `🧬 正在保留《${remixContext.originalTitle || '原游戏'}》的玩法并改编...`;
+    } else if (engine === 'pending') {
       loadingText = `⏳ 正在连接 ${currentModelLabel}...`;
     } else if (engine === 'volcengine') {
       loadingText = `🔥 ${usedModelName || currentModelLabel} 正在创作你的游戏...`;
     }
-    
+
     return (
       <div className="create-page">
         <LoadingAnimation text={loadingText} />
@@ -274,6 +294,11 @@ function Create() {
         <div className="generation-timer">
           ⏱️ 已等待 {elapsedSeconds} 秒
         </div>
+        {remixContext && (
+          <div className="remix-generating-hint">
+            🔒 会保留原游戏的玩法、得分和操作，只改你要求的部分
+          </div>
+        )}
         {/* API 返回后显示引擎/模型标识 */}
         {engine && engine !== 'pending' && (
           <div className="engine-badge">

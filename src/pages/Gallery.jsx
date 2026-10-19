@@ -24,11 +24,12 @@ function Gallery() {
   const [deleteId, setDeleteId] = useState(null);  // 待删除的作品 ID
 
   // 获取原始作品标题（用于「改编自 XXX」展示）
-  const getOriginalTitle = (remixFrom) => {
-    if (!remixFrom) return null;
-    const original = state.works.find(w => w.id === remixFrom);
-    if (!original) return '已删除的作品';
-    return original.title.length > 10 ? original.title.slice(0,10) + '…' : original.title;
+  // V3.3：优先使用作品自身留存的 remixFromTitle，源作品删除后也能正确展示
+  const getOriginalTitle = (work) => {
+    const raw = work.remixFromTitle ||
+      state.works.find(w => w.id === work.remixFrom)?.title;
+    if (!raw) return '已删除的作品';
+    return raw.length > 10 ? raw.slice(0,10) + '…' : raw;
   };
 
   /** 点击卡片 → 跳转播放页 */
@@ -92,7 +93,10 @@ function Gallery() {
             <div className="game-card-info">
               {/* 「改编自 XXX」标签 */}
               {work.remixFrom && (
-                <span className="remix-tag">改编自 {getOriginalTitle(work.remixFrom)}</span>
+                <span className="remix-tag">改编自 {getOriginalTitle(work)}</span>
+              )}
+              {work.remixAudit?.preserved && (
+                <span className="remix-preserved-tag">🧬 保留原玩法</span>
               )}
               <h3 className="game-card-title">{work.title}</h3>
               <p className="game-card-meta">
