@@ -216,6 +216,26 @@
 
 ---
 
+## 8.2 Vercel 部署复测（2026-10-19 22:15）
+
+内联修复（commit `7e00360`）推送到 `main` 后，Vercel 自动部署，生产环境复测：
+
+| 验收项 | 结果 |
+|--------|------|
+| `GET https://www.boxaikids.top/api/models` | ✅ 200，`success=true`，doubao / deepseek 均 available |
+| `POST /api/models/test`（doubao） | ✅ `success=true`，`reply=OK`，约 4.1s |
+| `POST /api/models/test`（deepseek） | ✅ `success=true`，`reply=OK`，约 2.1s |
+| `POST /api/models/test`（自定义 GLM，Key 留空回退环境变量） | ✅ `success=true`，`reply=OK`，约 3.3s |
+| `POST /api/generate`（默认 doubao） | ✅ `engine=volcengine`，`model=doubao`，HTML 9905 字符，约 83.5s |
+| `POST /api/generate`（自定义 GLM） | ✅ `engine=volcengine`，`model=custom-glm`，HTML 20771 字符 |
+
+补充说明：
+
+- 第一次默认模型生成用 `curl --max-time 150` 在 150 秒超时，重试后 83.5 秒成功；属于模型生成耗时波动，前端生成请求超时为 300 秒、Vercel `maxDuration=300`，仍在范围内。
+- 生产环境所有 `/api/*` 已从 `FUNCTION_INVOCATION_FAILED` 恢复为正常 JSON 响应。
+
+---
+
 ## 9. 未覆盖 / 待线上验证
 
 以下项目不影响本地功能交付，但建议在部署或配置真实模型后补测：
@@ -239,6 +259,7 @@ V3.2 交付范围内可自动化验证的功能、接口、安全与回归项全
 - 高级配置入口已预留且不影响生成；
 - 本地 `server/` 与 Vercel `api/` 双端行为一致；
 - 构建、SSR、浏览器 UI、刷新持久化均通过；
-- 真实 Doubao / DeepSeek / GLM-5.2 接入点测试均返回 `OK`。
+- 真实 Doubao / DeepSeek / GLM-5.2 接入点测试均返回 `OK`；
+- Vercel 生产环境 `/api/models`、`/api/models/test`、`/api/generate` 复测通过。
 
-**V3.2 本地验收通过，可进入部署阶段。**
+**V3.2 本地与生产部署验收通过。**
