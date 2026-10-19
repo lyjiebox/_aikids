@@ -102,6 +102,11 @@ function Gallery() {
                 })} · 玩了 {work.playCount} 次
                 {work.generationTime != null && ` · 生成 ${work.generationTime} 秒`}
               </p>
+              {work.modelName && (
+                <p className="game-card-model" title={work.modelName}>
+                  🤖 {work.modelName}
+                </p>
+              )}
             </div>
           </div>
         ))}

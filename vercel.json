@@ -3,6 +3,9 @@
   "functions": {
     "api/generate.ts": {
       "maxDuration": 300
+    },
+    "api/models/test.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

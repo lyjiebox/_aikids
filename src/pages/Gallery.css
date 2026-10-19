@@ -121,6 +121,20 @@
   margin: 0;
 }
 
+.game-card-model {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #6c5ce7;
+  background: #f5f3ff;
+  border-radius: 8px;
+  padding: 2px 6px;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bottom-spacer {
   height: 100px;
 }

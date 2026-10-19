@@ -2,95 +2,64 @@
  * ============================================================
  * Settings 页面 — 家长设置
  * ============================================================
- * 
+ *
  * 路由：/settings
- * 
+ *
  * 安全机制：
  * - 进入前需要过 ParentGate（简单算术验证）
  * - 防止儿童随意修改设置
- * 
+ *
  * 可配置项：
  * - 每日使用时长（10-60 分钟，默认 30）
  * - 单次使用时长（10-30 分钟，默认 20）
  * - 内容过滤级别（严格/适中）
+ * - AI 模型配置入口（V3.2，进入 /settings/models）
  * - 清空所有作品
  */
 
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import { getCurrentModelLabel } from '../services/model-utils';
+import ParentGate from '../components/ParentGate';
 import './Settings.css';
-
-/**
- * ParentGate — 家长验证门
- * 
- * 生成一道随机加法题（1-10 + 1-10），
- * 答对才能进入设置页。
- * 答错不锁定，可以无限重试。
- */
-function ParentGate({ onPass }) {
-  // 随机生成两个 1-10 的数字
-  const [a] = useState(Math.floor(Math.random() * 10) + 1);
-  const [b] = useState(Math.floor(Math.random() * 10) + 1);
-  const [input, setInput] = useState('');     // 用户输入
-  const [error, setError] = useState('');     // 错误提示
-
-  /** 验证答案 */
-  const handleSubmit = () => {
-    const val = Number(input.trim());
-    if (!Number.isFinite(val)) {
-      setError('请输入数字');
-      return;
-    }
-    if (val === a + b) {
-      setError('');
-      onPass();  // 验证通过，进入设置页
-    } else {
-      setError('答案不正确，请再试一次');
-      setInput('');
-    }
-  };
-
-  return (
-    <div className="parentgate-mask">
-      <div className="parentgate-card">
-        <h2 className="parentgate-title">家长验证</h2>
-        <p className="parentgate-question">{a} + {b} = ?</p>
-        <input
-          className="parentgate-input"
-          type="number"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="请输入答案"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSubmit();  // 回车提交
-          }}
-        />
-        {error && <p className="parentgate-error">{error}</p>}
-        <div className="parentgate-actions">
-          <button className="parentgate-btn parentgate-btn-confirm" onClick={handleSubmit}>
-            确定
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Settings — 家长设置页
  */
 function Settings() {
   const { state, updateSettings, dispatch } = useAppContext();
-  const [authenticated, setAuthenticated] = useState(false);  // 是否通过验证
+  // 同一会话内已验证过则不重复验证
+  const [authenticated, setAuthenticated] = useState(() => {
+    try {
+      return sessionStorage.getItem('aikids-parent-verified') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  const handlePass = () => {
+    try {
+      sessionStorage.setItem('aikids-parent-verified', '1');
+    } catch {
+      // 忽略存储失败
+    }
+    setAuthenticated(true);
+  };
 
   // 未验证 → 显示 ParentGate
   if (!authenticated) {
     return (
       <div className="settings-page auth">
-        <ParentGate onPass={() => setAuthenticated(true)} />
+        <ParentGate onPass={handlePass} />
       </div>
     );
   }
+
+  const modelSummary = getCurrentModelLabel(
+    state.models,
+    state.selectedModelId
+  );
 
   // 已验证 → 显示设置项
   return (
@@ -141,6 +110,19 @@ function Settings() {
             </span>
           </div>
         </div>
+
+        <div className="setting-divider"></div>
+
+        {/* V3.2：AI 模型配置入口（需家长验证后可见） */}
+        <Link to="/settings/models" className="setting-item setting-link">
+          <div className="setting-label">
+            <span className="label-text">🤖 AI 模型配置</span>
+            <span className="label-value model-summary" title={modelSummary}>
+              {modelSummary}
+            </span>
+          </div>
+          <span className="setting-arrow">→</span>
+        </Link>
 
         <div className="setting-divider"></div>
 

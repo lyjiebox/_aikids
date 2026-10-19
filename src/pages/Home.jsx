@@ -9,12 +9,14 @@
  * - 展示 App Logo + 名称
  * - 中央大按钮「🎤 说出你的游戏创意」→ 跳转创作页
  * - 下方横向模板卡片（精选 4 个）→ 点击跳转创作页并预选模板
+ * - 下部中间模型选择器（V3.2）→ 选择本次生成使用的模型
  * - 底部 Navbar 导航
  */
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TEMPLATES } from '../config/site';
+import ModelPicker from '../components/ModelPicker';
 import './Home.css';
 
 function Home() {
@@ -61,6 +63,11 @@ function Home() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* 下部中间：模型选择（V3.2） */}
+      <div className="model-select-section">
+        <ModelPicker />
       </div>
 
       {/* 底部留白（避免被 Navbar 遮挡） */}

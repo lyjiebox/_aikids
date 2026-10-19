@@ -76,75 +76,34 @@
   margin-top: 20px;
 }
 
-.parentgate-mask {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.parentgate-card {
-  width: 100%;
-  max-width: 400px;
-  background: white;
-  border-radius: 24px;
-  padding: 32px 24px;
-  text-align: center;
-}
-
-.parentgate-title {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 24px;
-  color: #2d3436;
-}
-
-.parentgate-question {
-  font-size: 40px;
-  font-weight: bold;
-  margin-bottom: 24px;
-  color: #6c5ce7;
-}
-
-.parentgate-input {
-  width: 100%;
-  height: 56px;
-  line-height: 56px;
-  border: 2px solid #e0e0e0;
-  border-radius: 16px;
-  font-size: 28px;
-  text-align: center;
-  padding: 0 12px;
-  margin-bottom: 16px;
-}
-
-.parentgate-error {
-  font-size: 16px;
-  color: #e74c3c;
-  margin-bottom: 20px;
-}
-
-.parentgate-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.parentgate-btn {
-  min-width: 150px;
-  height: 52px;
-  line-height: 52px;
-  border-radius: 999px;
-  font-size: 18px;
-  font-weight: bold;
-  border: none;
+.setting-link {
+  text-decoration: none;
+  color: inherit;
   cursor: pointer;
+  position: relative;
+  padding-right: 28px;
 }
 
-.parentgate-btn-confirm {
-  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-  color: white;
+.setting-link .setting-label {
+  flex: 1;
+}
+
+.setting-link .model-summary {
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6c5ce7;
+  font-size: 14px;
+}
+
+.setting-arrow {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #b2bec3;
+  font-size: 20px;
 }
 
 .bottom-spacer {

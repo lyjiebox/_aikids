@@ -32,8 +32,8 @@ function Navbar() {
         <span className="nav-text">作品</span>
       </Link>
 
-      {/* 设置 */}
-      <Link to="/settings" className={'nav-item ' + (location.pathname === '/settings' ? 'active' : '')}>
+      {/* 设置（含 /settings/models 子页面） */}
+      <Link to="/settings" className={'nav-item ' + (location.pathname.startsWith('/settings') ? 'active' : '')}>
         <span className="nav-icon">⚙️</span>
         <span className="nav-text">设置</span>
       </Link>

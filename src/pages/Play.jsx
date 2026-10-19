@@ -12,7 +12,8 @@
  * - 顶部浮动栏显示游戏标题和退出按钮
  * 
  * 安全措施：
- * - iframe sandbox="allow-scripts allow-same-origin"
+ * - iframe sandbox="allow-scripts"（V3.2 移除 allow-same-origin）
+ * - 生成游戏无法访问父页面 localStorage / 模型 API Key
  * - 不允许顶层导航、弹窗、表单提交
  */
 
@@ -99,7 +100,8 @@ function Play() {
           srcDoc={work.gameHtml}
           className="game-iframe"
           title={work.title}
-          sandbox="allow-scripts allow-same-origin"
+          sandbox="allow-scripts"
+          referrerPolicy="no-referrer"
         />
       </div>
 

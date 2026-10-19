@@ -2,21 +2,24 @@
  * ============================================================
  * AI 游戏生成服务（本地开发用）
  * ============================================================
- * 
+ *
  * 注意：Vercel 部署使用的是 api/generate.ts（内联版本），
  * 这个文件仅用于本地开发（npm run dev）时 server/ 目录下的后端服务。
- * 
- * 支持的 AI 引擎（按优先级）：
- * 1. 火山引擎 Agent Plan（Responses API）— 消耗预付费额度
- * 2. Anthropic Claude
- * 3. OpenAI
- * 
- * 环境变量：
- *   VOLCENGINE_API_KEY      — 火山引擎 API Key
- *   VOLCENGINE_ENDPOINT_ID  — 推理接入点 ID（ep-xxx）
- *   ANTHROPIC_API_KEY       — Anthropic API Key（备选）
- *   OPENAI_API_KEY          — OpenAI API Key（备选）
+ *
+ * V3.2 起模型解析交给 services/model.ts：
+ * - 内置模型由环境变量提供
+ * - 自定义模型由请求携带 modelConfig
+ * - 默认模型由 GAME_MODEL 决定
+ *
+ * 本文件只负责：组装 Prompt → 调用模型 → 解析游戏输出。
  */
+
+import {
+  callChatCompletion,
+  getGenerationTimeoutMs,
+  type ResolvedModel,
+  type ModelSource,
+} from './model';
 
 // ============================================================
 // System Prompt — 告诉 AI 如何生成儿童游戏
@@ -44,10 +47,18 @@ const SYSTEM_PROMPT = `你是一个儿童游戏生成专家。你必须生成一
 // 类型定义
 // ============================================================
 
-/** AI 生成的游戏结果 */
-export interface GameGenerationResult {
+/** 解析后的游戏数据 */
+interface ParsedGame {
   title: string;
   html: string;
+}
+
+/** AI 生成的游戏结果 */
+export interface GameGenerationResult extends ParsedGame {
+  modelId: string;
+  modelName: string;
+  modelSource: ModelSource;
+  engine: 'volcengine';
 }
 
 /** 游戏生成请求参数 */
@@ -57,6 +68,9 @@ export interface GameGenerationRequest {
   ageRange?: [number, number];  // 目标年龄段
   remixFrom?: string;           // Remix: 来源作品 ID
   remixInstruction?: string;    // Remix: 用户的改编指令
+  modelId?: string;             // 内置模型 ID
+  model?: string;               // 兼容旧字段
+  modelConfig?: unknown;        // 自定义模型配置
 }
 
 // ============================================================
@@ -72,11 +86,14 @@ const TEMPLATE_HINTS: Record<string, string> = {
 
 /**
  * 调用 AI API 生成游戏
- * 
- * 优先级：火山引擎 Agent Plan > Claude > OpenAI
- * 全部不可用时抛出异常
+ *
+ * 模型由调用方（routes/generate.ts）通过 model.ts 解析后传入，
+ * 本函数不再自行决定使用哪个模型。
  */
-export async function generateGameWithAI(req: GameGenerationRequest): Promise<GameGenerationResult> {
+export async function generateGameWithAI(
+  req: GameGenerationRequest,
+  model: ResolvedModel
+): Promise<GameGenerationResult> {
   // 拼接模板提示前缀
   let userPrompt = req.userPrompt;
   if (req.templateId && TEMPLATE_HINTS[req.templateId]) {
@@ -88,145 +105,93 @@ export async function generateGameWithAI(req: GameGenerationRequest): Promise<Ga
     userPrompt = `【改编请求】基于原始游戏「${req.userPrompt}」进行改编。用户改编要求：${req.remixInstruction}。请保留原游戏核心玩法，根据改编要求进行修改。`;
   }
 
-  // 1. 火山引擎 Responses API — 优先使用（需同时配置 Key 与接入点 ID）
-  if (process.env.VOLCENGINE_API_KEY && process.env.VOLCENGINE_ENDPOINT_ID) {
-    return await callVolcengineChat(
-      process.env.VOLCENGINE_API_KEY,
-      process.env.VOLCENGINE_ENDPOINT_ID,
-      userPrompt
-    );
-  }
+  console.log(
+    `[ai] 使用模型: ${model.name} (${model.source}), host=${safeHost(model.baseUrl)}`
+  );
 
-  // 2. Anthropic Claude — 备选
-  if (process.env.ANTHROPIC_API_KEY) {
-    return await callAnthropic(process.env.ANTHROPIC_API_KEY, userPrompt);
-  }
+  const { text, latencyMs } = await callChatCompletion(
+    model,
+    [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userPrompt }
+    ],
+    {
+      maxTokens: 8192,
+      temperature: 0.7,
+      timeoutMs: getGenerationTimeoutMs(),
+    }
+  );
 
-  // 3. OpenAI — 最后备选
-  if (process.env.OPENAI_API_KEY) {
-    return await callOpenAI(process.env.OPENAI_API_KEY, userPrompt);
-  }
+  console.log(`[ai] 模型响应耗时 ${latencyMs}ms，开始解析游戏输出`);
 
-  throw new Error("未配置有效的 AI API Key，请配置 VOLCENGINE_API_KEY + VOLCENGINE_ENDPOINT_ID、ANTHROPIC_API_KEY 或 OPENAI_API_KEY");
+  const parsed = parseGameOutput(text);
+
+  return {
+    ...parsed,
+    modelId: model.id,
+    modelName: model.name,
+    modelSource: model.source,
+    engine: 'volcengine',
+  };
 }
 
-/**
- * 调用火山引擎（Chat Completions API）
- * 
- * 使用标准 Chat Completions 接口，兼容豆包/DeepSeek/GLM 等多模型。
- * API 文档：https://www.volcengine.com/docs/82379
- */
-async function callVolcengineChat(apiKey: string, endpointId: string, userPrompt: string): Promise<GameGenerationResult> {
-  const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: endpointId,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt }
-      ],
-      max_tokens: 4096,
-      temperature: 0.7
-    })
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`火山引擎 Chat API 失败 (${response.status}): ${errText}`);
+/** 只打印主机名，避免日志出现完整地址或密钥 */
+function safeHost(baseUrl: string): string {
+  try {
+    return new URL(baseUrl).host;
+  } catch {
+    return 'invalid-url';
   }
-
-  const data = await response.json();
-
-  // Chat Completions 响应格式：choices[0].message.content
-  const text = data.choices?.[0]?.message?.content;
-  if (!text) throw new Error('火山引擎 Chat API 未返回文本内容');
-
-  return parseGameOutput(text);
-}
-
-/**
- * 调用 Anthropic Claude API
- */
-async function callAnthropic(apiKey: string, userPrompt: string): Promise<GameGenerationResult> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: 'claude-3-haiku-20240307',
-      max_tokens: 4000,
-      messages: [
-        { role: 'user', content: `${SYSTEM_PROMPT}\n\n用户描述：${userPrompt}` }
-      ]
-    })
-  });
-
-  if (!response.ok) throw new Error(`Anthropic API 失败: ${response.status}`);
-
-  const data = await response.json();
-  const text = data.content[0].text;
-  return parseGameOutput(text);
-}
-
-/**
- * 调用 OpenAI API
- */
-async function callOpenAI(apiKey: string, userPrompt: string): Promise<GameGenerationResult> {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt }
-      ],
-      max_tokens: 4000,
-      temperature: 0.7
-    })
-  });
-
-  if (!response.ok) throw new Error(`OpenAI API 失败: ${response.status}`);
-
-  const data = await response.json();
-  const text = data.choices[0].message.content;
-  return parseGameOutput(text);
 }
 
 /**
  * 解析 AI 输出的文本，提取 JSON 游戏数据
- * 
- * 支持三种格式：
+ *
+ * 支持五种格式：
  * 1. 纯 JSON: {"title":"xxx","html":"..."}
  * 2. Markdown 代码块: ```json { ... } ```
  * 3. 普通代码块: ``` { ... } ```
- * 
+ * 4. JSON 被截断时，尝试从已有内容提取 title 和 html
+ * 5. 纯 HTML（没有 JSON 包裹）
+ *
  * 全部失败时返回默认游戏（兜底）
  */
-function parseGameOutput(text: string): GameGenerationResult {
+function parseGameOutput(text: string): ParsedGame {
   // 尝试 1：直接解析 JSON
-  try { return JSON.parse(text) as GameGenerationResult; } catch {}
+  try { return JSON.parse(text) as ParsedGame; } catch {}
 
   // 尝试 2：提取 ```json ... ```
   const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
   if (jsonMatch) {
-    try { return JSON.parse(jsonMatch[1]) as GameGenerationResult; } catch {}
+    try { return JSON.parse(jsonMatch[1]) as ParsedGame; } catch {}
   }
-  
+
   // 尝试 3：提取 ``` ... ```
   const codeMatch = text.match(/```\s*([\s\S]*?)\s*```/);
   if (codeMatch) {
-    try { return JSON.parse(codeMatch[1]) as GameGenerationResult; } catch {}
+    try { return JSON.parse(codeMatch[1]) as ParsedGame; } catch {}
+  }
+
+  // 尝试 4：JSON 被截断时，正则提取 title 和 html
+  const titleMatch = text.match(/"title"\s*:\s*"([^"]*)"/);
+  const htmlMatch = text.match(/"html"\s*:\s*"([\s\S]*?)(?:"\s*\}|$)/);
+  if (titleMatch && htmlMatch) {
+    const html = htmlMatch[1]
+      .replace(/\\n/g, '\n')
+      .replace(/\\"/g, '"')
+      .replace(/\\t/g, '\t')
+      .replace(/\\\\/g, '\\');
+    return { title: titleMatch[1], html };
+  }
+
+  // 尝试 5：纯 HTML
+  const doctypeMatch = text.match(/<!DOCTYPE html>[\s\S]*/i);
+  if (doctypeMatch) {
+    const titleFromTag = text.match(/<title>([^<]*)<\/title>/i);
+    return {
+      title: titleFromTag ? titleFromTag[1] : 'AI 生成的游戏',
+      html: doctypeMatch[0],
+    };
   }
 
   // 全部失败 → 返回默认游戏
@@ -235,12 +200,12 @@ function parseGameOutput(text: string): GameGenerationResult {
 
 /**
  * 构建默认游戏（最终兜底方案）
- * 
+ *
  * 当 AI 返回的内容无法解析时，生成一个简单的点击 emoji 游戏。
  */
-function buildDefaultGame(description: string): GameGenerationResult {
+function buildDefaultGame(description: string): ParsedGame {
   const title = description.slice(0, 8) || "我的小游戏";
-  
+
   return {
     title,
     html: `<!DOCTYPE html>

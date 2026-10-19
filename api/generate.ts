@@ -2,23 +2,35 @@
  * ============================================================
  * Vercel Serverless Function: POST /api/generate
  * ============================================================
- * 
+ *
  * 这是部署在 Vercel 上的后端 API，负责：
  * 1. 接收前端的游戏生成请求（模板ID + 用户语音/文字输入）
- * 2. 调用火山引擎 Chat Completions API 生成 HTML5 儿童游戏
- * 3. 支持 DeepSeek V4 Pro 和 Doubao Seed 2.0 Pro 双模型切换
+ * 2. 解析请求中的模型（内置 modelId / 自定义 modelConfig / 环境变量默认）
+ * 3. 调用 OpenAI 兼容的 Chat Completions API 生成 HTML5 儿童游戏
  * 4. AI 调用失败时降级到本地 Mock 游戏模板
- * 5. 返回游戏 HTML 代码 + 引擎标识（volcengine/mock）+ 模型名
- * 
+ * 5. 返回游戏 HTML 代码 + 引擎标识 + 实际使用的模型
+ *
  * 依赖的环境变量（在 Vercel Settings 中配置）：
- *   VOLCENGINE_API_KEY       - 火山引擎 API Key（两个模型共用）
+ *   VOLCENGINE_API_KEY       - 火山方舟 API Key
+ *   VOLCENGINE_BASE_URL      - 可选，内置模型接口地址（默认火山方舟）
  *   DEEPSEEK_ENDPOINT_ID     - DeepSeek V4 Pro 推理接入点 ID（ep-xxx）
  *   DOUBAO_ENDPOINT_ID       - Doubao Seed 2.0 Pro 推理接入点 ID（ep-xxx）
- *   GAME_MODEL               - 默认模型选择：deepseek | doubao（可选，默认 doubao）
- * 
- * 超时配置：vercel.json 中 maxDuration 设为 300 秒（5 分钟）
+ *   VOLCENGINE_ENDPOINT_ID   - 可选，Doubao 旧变量回退
+ *   GAME_MODEL               - 默认模型：deepseek | doubao（可选）
+ *   ALLOWED_MODEL_HOSTS      - 自定义模型域名白名单（逗号分隔，可选）
+ *   ALLOW_LOCAL_MODEL_HOSTS  - 是否允许 localhost（仅本地测试）
+ *   MODEL_TIMEOUT_MS         - 生成超时（默认 280000）
+ *
+ * 超时配置：vercel.json 中 generate maxDuration=300，test maxDuration=60。
  */
 import { Hono } from 'hono';
+import {
+  ModelCallError,
+  ModelConfigError,
+  callChatCompletion,
+  getGenerationTimeoutMs,
+  resolveRequestModel,
+} from './_model';
 
 // ============================================================
 // AI System Prompt - 告诉 AI 怎么生成儿童游戏
@@ -41,104 +53,6 @@ const SYSTEM_PROMPT = `你是一个儿童游戏生成专家。你必须生成一
   "title": "游戏名称（4-8个字）",
   "html": "完整的 HTML5 游戏代码"
 }`;
-
-// ============================================================
-// 模型配置
-// ============================================================
-
-/** 支持的模型标识 */
-type ModelType = 'deepseek' | 'doubao';
-
-/** 模型显示名映射 */
-const MODEL_NAMES: Record<ModelType, string> = {
-  deepseek: 'DeepSeek V4 Pro',
-  doubao: 'Doubao Seed 2.0 Pro',
-};
-
-/**
- * 根据模型类型获取对应的 endpoint ID
- */
-function getEndpointId(model: ModelType): string | undefined {
-  if (model === 'deepseek') return process.env.DEEPSEEK_ENDPOINT_ID;
-  if (model === 'doubao') return process.env.DOUBAO_ENDPOINT_ID;
-  return undefined;
-}
-
-/**
- * 获取已配置的模型列表（至少配了 endpoint 才算可用）
- */
-function getAvailableModels(): ModelType[] {
-  const models: ModelType[] = [];
-  if (process.env.DOUBAO_ENDPOINT_ID) models.push('doubao');
-  if (process.env.DEEPSEEK_ENDPOINT_ID) models.push('deepseek');
-  return models;
-}
-
-// ============================================================
-// 核心AI调用 - Chat Completions API
-// ============================================================
-
-/**
- * 调用火山引擎 Chat Completions API 生成游戏
- * 
- * 统一使用 Chat Completions 接口，兼容 DeepSeek 和 Doubao 模型。
- * 
- * @param userPrompt 用户的语音/文字输入（已拼接模板提示前缀）
- * @param model 模型类型：deepseek | doubao
- * @returns { title: 游戏标题, html: 完整 HTML 代码 }
- */
-async function callVolcengineAI(
-  userPrompt: string,
-  model: ModelType
-): Promise<{ title: string; html: string }> {
-  const apiKey = process.env.VOLCENGINE_API_KEY;
-  const endpointId = getEndpointId(model);
-
-  if (!apiKey || !endpointId) {
-    throw new Error(`模型 ${MODEL_NAMES[model]} 未配置完整（需要 VOLCENGINE_API_KEY 和 endpoint ID）`);
-  }
-
-  console.log(`[generate] 调用 ${MODEL_NAMES[model]}, endpoint: ${endpointId.slice(0, 8)}...`);
-
-  const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: endpointId,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt }
-      ],
-      max_tokens: 8192,
-      temperature: 0.7
-    })
-  });
-
-  // 检查 HTTP 状态码
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`${MODEL_NAMES[model]} API 失败 (${response.status}): ${errText}`);
-  }
-
-  const data = await response.json();
-
-  // Chat Completions 响应格式：choices[0].message.content
-  const text = data.choices?.[0]?.message?.content;
-  if (!text) throw new Error(`${MODEL_NAMES[model]} 未返回文本内容`);
-
-  // 打印 AI 原始输出（前 500 字符），方便调试解析失败
-  console.log(`[generate] ${MODEL_NAMES[model]} 原始输出 (前500字符):`, text.slice(0, 500));
-
-  // 打印实际返回的模型名（用于验证 endpoint 绑定正确）
-  if (data.model) {
-    console.log(`[generate] 实际模型: ${data.model}`);
-  }
-
-  return parseGameOutput(text);
-}
 
 // ============================================================
 // 输出解析
@@ -301,31 +215,65 @@ const app = new Hono();
 
 /**
  * POST /api/generate
- * 
- * 请求体：{ templateId?: string, userPrompt: string, model?: 'deepseek'|'doubao', remixFrom?, remixInstruction?, ... }
- * 响应体：{ success: true, data: { title, gameHtml, engine, model } }
- * 
+ *
+ * 请求体：{ templateId?, userPrompt, remixFrom?, remixInstruction?, ...,
+ *           modelId?, model?, modelConfig? }
+ * 响应体：{ success: true, data: { title, gameHtml, engine, model, modelName, modelSource } }
+ *
  * 模型选择优先级：
- * 1. 请求体中的 model 参数（前端动态指定）
- * 2. 环境变量 GAME_MODEL
- * 3. 默认 doubao（更快）
- * 
- * 如果指定的模型未配置 endpoint，自动降级到另一个已配置的模型。
+ * 1. modelConfig（自定义模型）
+ * 2. modelId / model（内置模型）
+ * 3. 环境变量 GAME_MODEL（未选择时）
+ * 4. 无可用模型 → Mock
  */
 app.post('*', async (c) => {
   try {
-    const body = await c.req.json();
-    const { templateId, userPrompt, remixFrom, remixInstruction, originalUserPrompt, originalTitle, originalGameHtmlPreview, model: requestModel } = body;
-    
-    console.log('[generate] 请求:', { 
-      templateId, 
-      prompt: userPrompt?.slice(0, 50), 
-      remix: !!remixFrom,
-      model: requestModel 
+    let body: Record<string, unknown>;
+    try {
+      const parsed = await c.req.json();
+      body =
+        typeof parsed === 'object' && parsed !== null
+          ? (parsed as Record<string, unknown>)
+          : {};
+    } catch {
+      return c.json({ success: false, message: '请求参数格式错误' }, 400);
+    }
+
+    const {
+      templateId,
+      userPrompt,
+      remixFrom,
+      remixInstruction,
+      originalUserPrompt,
+      originalTitle,
+      originalGameHtmlPreview,
+      modelId,
+      model: legacyModel,
+      modelConfig,
+    } = body;
+
+    if (
+      typeof userPrompt !== 'string' ||
+      !userPrompt.trim()
+    ) {
+      return c.json(
+        { success: false, message: '请先说出你的游戏创意！' },
+        400
+      );
+    }
+
+    const promptText = userPrompt as string;
+
+    console.log('[generate] 请求:', {
+      templateId,
+      prompt: promptText.slice(0, 50),
+      remix: Boolean(remixFrom),
+      modelId: modelId || legacyModel || null,
+      customModel: Boolean(modelConfig),
     });
 
     // 拼接最终 Prompt
-    let finalPrompt = userPrompt;
+    let finalPrompt = promptText;
     if (remixFrom && remixInstruction) {
       finalPrompt = `
 原始游戏信息：
@@ -337,67 +285,117 @@ app.post('*', async (c) => {
 
 请根据原始游戏和改编想法，生成一个完整的新游戏。新游戏应体现用户的改编意图，同时保持适合 3-10 岁儿童的简洁玩法。
 `;
-    } else if (templateId && TEMPLATE_HINTS[templateId]) {
-      finalPrompt = TEMPLATE_HINTS[templateId] + '。' + userPrompt;
+    } else if (
+      typeof templateId === 'string' &&
+      TEMPLATE_HINTS[templateId]
+    ) {
+      finalPrompt = TEMPLATE_HINTS[templateId] + '。' + promptText;
     }
 
-    // 确定使用哪个模型
-    const availableModels = getAvailableModels();
-    let model: ModelType | undefined;
+    // 解析模型：自定义 modelConfig > 内置 modelId/model > GAME_MODEL 默认模型
+    let resolved;
+    try {
+      resolved = resolveRequestModel({
+        modelId: modelId || legacyModel,
+        modelConfig,
+      });
+    } catch (error) {
+      if (error instanceof ModelConfigError) {
+        return c.json({ success: false, message: error.message }, 400);
+      }
+      throw error;
+    }
 
-    if (availableModels.length === 0) {
-      // 没有配置任何 endpoint，直接 Mock
-      console.log('[generate] 未配置任何模型 endpoint，使用 Mock');
-      const game = generateMockGame(userPrompt, templateId);
+    // 没有任何可用模型 → Mock 兜底（与旧行为一致）
+    if (!resolved) {
+      console.log('[generate] 未配置可用模型，使用 Mock');
+      const game = generateMockGame(promptText, templateId as string | undefined);
       return c.json({
         success: true,
-        data: { title: game.title, gameHtml: game.html, engine: 'mock', model: 'none' }
+        data: {
+          title: game.title,
+          gameHtml: game.html,
+          engine: 'mock',
+          model: 'mock',
+          modelName: '本地模板',
+        },
       });
     }
 
-    // 优先用请求参数，其次环境变量，最后默认 doubao
-    const preferredModel = (requestModel as ModelType) || (process.env.GAME_MODEL as ModelType) || 'doubao';
-
-    if (availableModels.includes(preferredModel)) {
-      model = preferredModel;
-    } else {
-      // 指定模型未配置，降级到第一个可用的
-      model = availableModels[0];
-      console.log(`[generate] ⚠️ 指定模型 ${preferredModel} 未配置，降级到 ${MODEL_NAMES[model]}`);
-    }
-
-    console.log(`[generate] 使用模型: ${MODEL_NAMES[model]}`);
-
-    // 调用 AI 生成
-    let game;
-    let engine: 'volcengine' | 'mock' = 'mock';
+    console.log(
+      `[generate] 使用模型: ${resolved.name} (${resolved.source}), host=${safeHost(resolved.baseUrl)}`
+    );
 
     try {
-      game = await callVolcengineAI(finalPrompt, model);
-      engine = 'volcengine';
-      console.log(`[generate] ✅ ${MODEL_NAMES[model]} 生成成功:`, game.title);
-    } catch (aiError: any) {
-      console.warn(`[generate] ⚠️ ${MODEL_NAMES[model]} 失败，降级 Mock:`, aiError.message);
-      game = generateMockGame(userPrompt, templateId);
-    }
+      const { text, latencyMs } = await callChatCompletion(
+        resolved,
+        [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: finalPrompt },
+        ],
+        {
+          maxTokens: 8192,
+          temperature: 0.7,
+          timeoutMs: getGenerationTimeoutMs(),
+        }
+      );
 
-    return c.json({
-      success: true,
-      data: {
-        title: game.title,
-        gameHtml: game.html,
-        engine,
-        model: engine === 'volcengine' ? model : 'mock',
-      }
-    });
+      console.log(
+        `[generate] ${resolved.name} 响应耗时 ${latencyMs}ms，原始输出前 200 字符:`,
+        text.slice(0, 200)
+      );
+
+      const game = parseGameOutput(text);
+      console.log(`[generate] ✅ ${resolved.name} 生成成功:`, game.title);
+
+      return c.json({
+        success: true,
+        data: {
+          title: game.title,
+          gameHtml: game.html,
+          engine: 'volcengine',
+          model: resolved.id,
+          modelName: resolved.name,
+          modelSource: resolved.source,
+        },
+      });
+    } catch (aiError) {
+      const warning =
+        aiError instanceof ModelCallError
+          ? aiError.message
+          : '模型调用失败';
+      console.warn('[generate] ⚠️ 模型调用失败，降级 Mock:', warning);
+
+      const game = generateMockGame(promptText, templateId as string | undefined);
+      return c.json({
+        success: true,
+        data: {
+          title: game.title,
+          gameHtml: game.html,
+          engine: 'mock',
+          model: 'mock',
+          modelName: '本地模板',
+          warning: `${warning}，已降级为本地模板`,
+        },
+      });
+    }
   } catch (error) {
     console.error('[generate] 失败:', error);
-    return c.json({
-      success: false,
-      message: "生成失败，请稍后再试"
-    }, 500);
+    return c.json(
+      { success: false, message: '生成失败，请稍后再试' },
+      500
+    );
   }
 });
+
+/** 只打印主机名，避免日志出现完整地址或密钥 */
+function safeHost(baseUrl: string): string {
+  try {
+    return new URL(baseUrl).host;
+  } catch {
+    return 'invalid-url';
+  }
+}
 
 /** Vercel 要求使用命名 HTTP 方法导出 */
 export const POST = (request: Request) => app.fetch(request);

@@ -22,3 +22,8 @@ npm-debug.log*
 # Temporary files
 temp/*.html
 temp/*.log
+
+# Test artifacts (keep test scripts, ignore heavy generated files)
+temp/**/chrome-profile*/
+temp/**/esbuild-check/
+temp/**/*.log

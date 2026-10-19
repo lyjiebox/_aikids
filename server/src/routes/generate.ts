@@ -1,5 +1,11 @@
 import { Hono } from "hono";
 import type { GenerateRequest, GenerateResponse } from "../types";
+import { generateGameWithAI } from "../services/ai";
+import {
+  ModelCallError,
+  ModelConfigError,
+  resolveRequestModel,
+} from "../services/model";
 
 // 简单的 Mock 游戏生成器（兜底方案）
 function generateMockGame(prompt: string, templateId?: string) {
@@ -111,37 +117,121 @@ const generateRoute = new Hono();
 
 generateRoute.post("/", async (c) => {
   try {
-    const body = (await c.req.json()) as GenerateRequest;
-    const { templateId, userPrompt, remixFrom, remixInstruction } = body;
-    
-    console.log('生成游戏请求:', { templateId, userPrompt: userPrompt?.slice(0, 50), remixFrom, remixInstruction: remixInstruction?.slice(0, 50) });
-    
-    // 检查是否配置了 AI API Key
-    const hasVolcengine = process.env.VOLCENGINE_API_KEY && process.env.VOLCENGINE_ENDPOINT_ID;
-    const hasApiKey = hasVolcengine || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY;
-    
-    let game;
-    
-    if (hasApiKey) {
-      try {
-        const { generateGameWithAI } = await import('../services/ai');
-        game = await generateGameWithAI({ templateId, userPrompt, ageRange: [3, 10], remixFrom, remixInstruction });
-        console.log('AI 游戏生成成功');
-      } catch (aiError) {
-        console.warn('AI 生成失败，使用 Mock 兜底:', aiError);
-        game = generateMockGame(userPrompt, templateId);
-      }
-    } else {
-      console.log('未配置 API Key，使用 Mock 生成');
-      game = generateMockGame(userPrompt, templateId);
+    let body: GenerateRequest;
+    try {
+      body = (await c.req.json()) as GenerateRequest;
+    } catch {
+      return c.json(
+        { success: false, message: "请求参数格式错误" } as GenerateResponse,
+        400
+      );
     }
 
-    return c.json({
-      success: true,
-      data: { gameHtml: game.html, title: game.title },
-    } as GenerateResponse);
+    const {
+      templateId,
+      userPrompt,
+      remixFrom,
+      remixInstruction,
+      modelId,
+      model,
+      modelConfig,
+    } = body;
+
+    if (!userPrompt || typeof userPrompt !== "string" || !userPrompt.trim()) {
+      return c.json(
+        { success: false, message: "请先说出你的游戏创意！" } as GenerateResponse,
+        400
+      );
+    }
+
+    console.log("生成游戏请求:", {
+      templateId,
+      userPrompt: userPrompt.slice(0, 50),
+      remix: Boolean(remixFrom),
+      modelId: modelId || model || null,
+      customModel: Boolean(modelConfig),
+    });
+
+    // 解析模型：自定义 modelConfig > 内置 modelId/model > GAME_MODEL 默认模型
+    let resolved;
+    try {
+      resolved = resolveRequestModel({
+        modelId: modelId || model,
+        modelConfig,
+      });
+    } catch (e) {
+      if (e instanceof ModelConfigError) {
+        return c.json(
+          { success: false, message: e.message } as GenerateResponse,
+          400
+        );
+      }
+      throw e;
+    }
+
+    // 没有任何可用模型 → Mock 兜底（与旧行为一致）
+    if (!resolved) {
+      console.log("未配置可用模型，使用 Mock 生成");
+      const game = generateMockGame(userPrompt, templateId);
+      return c.json({
+        success: true,
+        data: {
+          gameHtml: game.html,
+          title: game.title,
+          engine: "mock",
+          model: "mock",
+          modelName: "本地模板",
+        },
+      } as GenerateResponse);
+    }
+
+    try {
+      const game = await generateGameWithAI(
+        {
+          templateId,
+          userPrompt,
+          ageRange: [3, 10],
+          remixFrom,
+          remixInstruction,
+        },
+        resolved
+      );
+
+      console.log("AI 游戏生成成功:", game.title);
+
+      return c.json({
+        success: true,
+        data: {
+          gameHtml: game.html,
+          title: game.title,
+          engine: game.engine,
+          model: game.modelId,
+          modelName: game.modelName,
+          modelSource: game.modelSource,
+        },
+      } as GenerateResponse);
+    } catch (aiError) {
+      const warning =
+        aiError instanceof ModelCallError
+          ? aiError.message
+          : "模型调用失败";
+      console.warn("AI 生成失败，使用 Mock 兜底:", warning);
+
+      const game = generateMockGame(userPrompt, templateId);
+      return c.json({
+        success: true,
+        data: {
+          gameHtml: game.html,
+          title: game.title,
+          engine: "mock",
+          model: "mock",
+          modelName: "本地模板",
+          warning: `${warning}，已降级为本地模板`,
+        },
+      } as GenerateResponse);
+    }
   } catch (e) {
-    console.error('生成失败:', e);
+    console.error("生成失败:", e);
     return c.json(
       {
         success: false,

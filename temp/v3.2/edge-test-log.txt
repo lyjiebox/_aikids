@@ -1,0 +1,61 @@
+===== 无模型配置（PORT=4010）=====
+-- GET /api/models --
+{
+    "success": true,
+    "data": {
+        "models": [
+            {
+                "id": "doubao",
+                "name": "Doubao Seed 2.0 Pro",
+                "source": "env",
+                "available": false,
+                "baseUrl": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+                "modelPreview": "",
+                "hasApiKey": false,
+                "isDefault": false,
+                "unavailableReason": "\u672a\u914d\u7f6e DOUBAO_ENDPOINT_ID"
+            },
+            {
+                "id": "deepseek",
+                "name": "DeepSeek V4 Pro",
+                "source": "env",
+                "available": false,
+                "baseUrl": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+                "modelPreview": "",
+                "hasApiKey": false,
+                "isDefault": false,
+                "unavailableReason": "\u672a\u914d\u7f6e DEEPSEEK_ENDPOINT_ID"
+            }
+        ],
+        "defaultModelId": null,
+        "defaultModelName": null,
+        "hasServerApiKey": false
+    }
+}
+-- POST /api/generate --
+{
+    "success": true,
+    "data": {
+        "gameHtml": "<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n  <title>\u8df3\u8dc3\u7684\u5c0f\u5154\u5b50</title>\n  <style>\n    * { margin:0; padding:0; box-sizing:border-box; }\n    body { \n      background: linear-gradient(135deg, #90ee90 0%, #87ceeb 100%);\n      display:flex; align-items:center; justify-content:center; \n      min-height:100vh; font-family:system-ui, sans-serif;\n    }\n    .game {\n      width:100%; max-width:500px; text-align:center; padding:20px;\n    }\n    .bunny {\n      font-size:100px; cursor:pointer; display:inline-block;\n      transition: transform 0.1s;\n    }\n    .bunny:active { transform: translateY(-20px) scale(1.1); }\n    .score {\n      font-size:30px; color:#fff; font-weight:bold; margin-bottom:20px;\n      text-shadow: 0 2px 4px rgba(0,0,0,0.3);\n    }\n  </style>\n</head>\n<body>\n  <div class=\"game\">\n    <div class=\"score\">\u5f97\u5206: <span id=\"score\">0</span></div>\n    <div class=\"bunny\" id=\"bunny\">\ud83d\udc30</div>\n  </div>\n  <script>\n    let score = 0;\n    const bunny = document.getElementById('bunny');\n    const scoreEl = document.getElementById('score');\n    bunny.addEventListener('click', () => {\n      score++;\n      scoreEl.textContent = score;\n      bunny.style.animation = 'none';\n      setTimeout(() => bunny.style.animation = '', 10);\n    });\n  </script>\n</body>\n</html>",
+        "title": "\u8df3\u8dc3\u7684\u5c0f\u5154\u5b50",
+        "engine": "mock",
+        "model": "mock",
+        "modelName": "\u672c\u5730\u6a21\u677f"
+    }
+}
+===== 旧变量 VOLCENGINE_ENDPOINT_ID 兼容（PORT=4013）=====
+{
+  "models": [
+    {
+      "id": "doubao",
+      "available": true,
+      "preview": "ep-l…-uat"
+    },
+    {
+      "id": "deepseek",
+      "available": false,
+      "preview": ""
+    }
+  ],
+  "default": "doubao"
+}

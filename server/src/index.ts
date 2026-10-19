@@ -6,6 +6,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import generateRoute from "./routes/generate";
+import modelsRoute from "./routes/models";
 
 const app = new Hono();
 
@@ -17,6 +18,7 @@ app.get("/", (c) => c.text("AI Kids Server - OK!"));
 
 // 路由挂载
 app.route("/api/generate", generateRoute);
+app.route("/api/models", modelsRoute);
 
 // 端口监听
 const port = Number(process.env.PORT) || 4000;

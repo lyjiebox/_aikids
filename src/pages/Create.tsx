@@ -25,6 +25,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { TEMPLATES } from '../config/site';
 import { useAppContext } from '../context/AppContext';
 import { generateGame } from '../services/api';
+import {
+  getCurrentModelLabel,
+  getModelRequestParams,
+} from '../services/model-utils';
 import TemplatePicker from '../components/TemplatePicker';
 import LoadingAnimation from '../components/LoadingAnimation';
 import { VoiceInput } from '../components/VoiceInput';
@@ -33,7 +37,7 @@ import './Create.css';
 function Create() {
   const [searchParams] = useSearchParams();     // URL 参数（预选模板/Remix）
   const navigate = useNavigate();
-  const { addWork, incrementRemixCount } = useAppContext();
+  const { state, addWork, incrementRemixCount } = useAppContext();
   const [remixContext, setRemixContext] = useState(null);
   
   const [selectedTemplate, setSelectedTemplate] = useState('free');  // 当前选中的模板
@@ -41,9 +45,25 @@ function Create() {
   const [step, setStep] = useState(1);                                // 当前步骤
   const [isGenerating, setIsGenerating] = useState(false);            // 是否正在生成
   const [engine, setEngine] = useState(null);                         // AI 引擎类型
+  const [usedModelName, setUsedModelName] = useState(null);           // 实际使用的模型名
+  const [fallbackWarning, setFallbackWarning] = useState(null);       // 降级提示
   const [elapsedSeconds, setElapsedSeconds] = useState(0);            // 生成耗时（秒）
   const startTimeRef = useRef<number>(0);                             // 生成开始时间戳
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null); // 计时器引用
+
+  // 首页选择的模型（只读展示 + 生成请求参数）
+  const currentModelLabel = getCurrentModelLabel(state.models, state.selectedModelId);
+
+  // Remix 自动生成会在 setTimeout 中调用首帧闭包，用 ref 读取最新模型状态
+  const modelStateRef = useRef(state.models);
+  const selectedModelRef = useRef(state.selectedModelId);
+  useEffect(() => {
+    modelStateRef.current = state.models;
+    selectedModelRef.current = state.selectedModelId;
+  }, [state.models, state.selectedModelId]);
+
+  const getModelParams = () =>
+    getModelRequestParams(modelStateRef.current, selectedModelRef.current);
 
   // 如果是 Remix 模式，自动加载上下文并开始生成
   useEffect(() => {
@@ -85,6 +105,8 @@ function Create() {
     setStep(3);
     setIsGenerating(true);
     setEngine('pending');
+    setUsedModelName(null);
+    setFallbackWarning(null);
     setElapsedSeconds(0);
     startTimeRef.current = Date.now();
     timerRef.current = setInterval(() => {
@@ -98,10 +120,13 @@ function Create() {
         remixInstruction: ctx.remixInstruction,
         originalUserPrompt: ctx.originalUserPrompt,
         originalTitle: ctx.originalTitle,
-        originalGameHtmlPreview: ctx.originalGameHtml
+        originalGameHtmlPreview: ctx.originalGameHtml,
+        ...getModelParams(),
       });
       const finalEngine = res.data?.engine || 'mock';
       setEngine(finalEngine);
+      setUsedModelName(res.data?.modelName || null);
+      setFallbackWarning(res.data?.warning || null);
       if (res.success && res.data) {
         if (timerRef.current) clearInterval(timerRef.current);
         const generationTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
@@ -112,6 +137,9 @@ function Create() {
           userPrompt: ctx.remixInstruction,
           gameHtml: res.data.gameHtml,
           engine: finalEngine,
+          modelId: res.data.model || null,
+          modelName: res.data.modelName || null,
+          modelSource: res.data.modelSource || null,
           createdAt: Date.now(),
           playCount: 0,
           generationTime,
@@ -149,6 +177,8 @@ function Create() {
     setStep(3);
     setIsGenerating(true);
     setEngine('pending'); // 显示"正在连接 AI 引擎..."
+    setUsedModelName(null);
+    setFallbackWarning(null);
     setElapsedSeconds(0);
     startTimeRef.current = Date.now();
     
@@ -161,10 +191,13 @@ function Create() {
       const res = await generateGame({
         templateId: selectedTemplate,
         userPrompt: userInput,
+        ...getModelParams(),
       });
 
       const finalEngine = res.data?.engine || 'mock';
       setEngine(finalEngine);
+      setUsedModelName(res.data?.modelName || null);
+      setFallbackWarning(res.data?.warning || null);
 
       if (res.success && res.data) {
         // 停止计时器
@@ -182,6 +215,9 @@ function Create() {
           userPrompt: userInput,
           gameHtml: res.data.gameHtml,
           engine: finalEngine,
+          modelId: res.data.model || null,
+          modelName: res.data.modelName || null,
+          modelSource: res.data.modelSource || null,
           createdAt: Date.now(),
           playCount: 0,
           generationTime,                      // 生成耗时（秒）
@@ -225,8 +261,11 @@ function Create() {
   if (isGenerating || step === 3) {
     // 根据 engine 状态显示不同文案
     let loadingText = '🎨 正在生成游戏...';
-    if (engine === 'pending') loadingText = '⏳ 正在连接 AI 引擎...';
-    else if (engine === 'volcengine') loadingText = '🔥 AI 正在创作你的游戏...';
+    if (engine === 'pending') {
+      loadingText = `⏳ 正在连接 ${currentModelLabel}...`;
+    } else if (engine === 'volcengine') {
+      loadingText = `🔥 ${usedModelName || currentModelLabel} 正在创作你的游戏...`;
+    }
     
     return (
       <div className="create-page">
@@ -235,10 +274,17 @@ function Create() {
         <div className="generation-timer">
           ⏱️ 已等待 {elapsedSeconds} 秒
         </div>
-        {/* API 返回后显示引擎标识 */}
+        {/* API 返回后显示引擎/模型标识 */}
         {engine && engine !== 'pending' && (
           <div className="engine-badge">
-            {engine === 'volcengine' ? '🤖 火山引擎 AI' : '📦 本地模板'}
+            {engine === 'volcengine'
+              ? `🤖 ${usedModelName || 'AI 模型'}`
+              : '📦 本地模板'}
+          </div>
+        )}
+        {fallbackWarning && (
+          <div className="fallback-warning">
+            ⚠️ {fallbackWarning}
           </div>
         )}
       </div>
@@ -293,6 +339,16 @@ function Create() {
           <h2 className="section-title">说出你的创意</h2>
           <VoiceInput value={userInput} onChange={setUserInput} />
         </div>
+
+        {/* 当前模型（只读，点击回首页切换） */}
+        <button
+          type="button"
+          className="current-model-hint"
+          onClick={() => navigate('/')}
+        >
+          🤖 当前模型：{currentModelLabel}
+          <span className="current-model-switch">去首页切换 →</span>
+        </button>
 
         {/* 生成按钮：无输入时禁用 */}
         <button

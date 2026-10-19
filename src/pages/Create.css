@@ -161,3 +161,45 @@
   font-size: 18px;
   font-weight: 500;
 }
+
+.current-model-hint {
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 16px;
+  background: #f5f3ff;
+  color: #6c5ce7;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.current-model-hint:active {
+  transform: scale(0.99);
+}
+
+.current-model-switch {
+  font-size: 12px;
+  color: #8a8f98;
+  white-space: nowrap;
+}
+
+.fallback-warning {
+  max-width: 420px;
+  margin: 12px auto 0;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}

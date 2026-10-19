@@ -14,11 +14,12 @@ npm run dev
 
 ### 前端服务
 ```bash
-cd frontend
 npm install
 npm run dev
 ```
 前端运行在 http://localhost:3000（或 3001）
+
+> 环境变量：复制根目录 `.env.example` 为 `.env`，填写 `VOLCENGINE_API_KEY`、`DOUBAO_ENDPOINT_ID`、`DEEPSEEK_ENDPOINT_ID`、`GAME_MODEL` 等。完整说明见 `.env.example`。
 
 ## 📁 项目结构
 
@@ -40,13 +41,17 @@ _aikids/
 - 🎮 AI 生成可玩的 HTML5 小游戏
 - 📚 作品本地存储
 - 👨‍👩‍👧 家长控制功能
+- 🤖 首页选择生成模型（V3.2）：默认跟随环境变量 `GAME_MODEL`，也可选择内置/自定义模型
+- ⚙️ 设置内模型配置（家长验证）：添加、编辑、删除、测试模型；自定义模型保存在本机浏览器
+- 🧪 模型测试只验证调用与返回，不生成游戏
+- 🧩 高级配置入口预留：提示词优化、最长提示词、最长等待时间
 
 ## 📝 说明
 
 - 前端原来用 Taro 实现（见 `client-taro-broken/` 目录，已废弃），后来改成更简单的 Vite + React
-- AI 游戏生成接入火山引擎 Responses API（支持 Seed 2.0 Pro、DeepSeek、GLM 等模型）
-- AI 不可用时自动降级到本地 Mock 游戏
-- 生产环境部署在 Vercel（`api/generate.ts` 作为 Serverless Function）
+- AI 游戏生成接入 OpenAI 兼容的 Chat Completions API（火山方舟 Ark：Doubao Seed 2.0 Pro / DeepSeek V4 Pro，也支持自定义兼容接口）
+- 未选择模型时按环境变量 `GAME_MODEL` 生成；AI 不可用时自动降级到本地 Mock 游戏
+- 生产环境部署在 Vercel（`api/` 作为 Serverless Functions）
 - 独立域名：boxaikids.top
 
 ---

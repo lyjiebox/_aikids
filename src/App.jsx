@@ -9,6 +9,7 @@
  *   /play/:workId  → Play（游戏播放页）
  *   /gallery       → Gallery（作品列表页）
  *   /settings      → Settings（家长设置页）
+ *   /settings/models → Models（模型配置页，V3.2）
  * 
  * 布局：
  *   AppProvider（全局状态）
@@ -25,6 +26,7 @@ import Create from './pages/Create';
 import Play from './pages/Play';
 import Gallery from './pages/Gallery';
 import Settings from './pages/Settings';
+import Models from './pages/Models';
 import Navbar from './components/Navbar';
 
 function App() {
@@ -39,6 +41,7 @@ function App() {
             <Route path="/play/:workId" element={<Play />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/models" element={<Models />} />
           </Routes>
           {/* 底部导航栏：首页 / 作品 / 设置 */}
           <Navbar />
