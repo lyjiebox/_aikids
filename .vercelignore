@@ -32,3 +32,6 @@ coverage/
 
 # 本地后端开发目录（Vercel 部署用 api/ 目录）
 server/
+
+# Vercel API 内联源（模型代码已复制进各 API 函数，不需要部署）
+api/_model.ts

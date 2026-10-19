@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * 模型注册与调用（Vercel 共享模块）
+ * 模型注册与调用（Vercel 内联源）
  * ============================================================
  *
  * 职责：
@@ -10,9 +10,16 @@
  * 4. 统一调用 OpenAI 兼容的 Chat Completions 接口
  * 5. 提供模型测试（只验证调用与返回，不生成游戏）
  *
- * 注意：server/src/services/model.ts 与本文件保持对等，修改时需同步两端。
- * 所有环境变量都在函数内部读取，确保 server/src/loadEnv.ts
- * 先加载 .env 后再取值。
+ * 重要：Vercel 的 Node File Trace 不会把 api/ 下的跨文件
+ * 相对导入打包进 sibling function，运行时会出现
+ * ERR_MODULE_NOT_FOUND / FUNCTION_INVOCATION_FAILED。
+ * 因此本文件仅作为内联源，由 temp/v3.2/inline-api-model.mjs
+ * 复制到以下三个自包含函数文件，请勿直接 import：
+ *   - api/generate.ts
+ *   - api/models/index.ts
+ *   - api/models/test.ts
+ * 本文件与 server/src/services/model.ts 保持对等。
+ * 所有环境变量都在函数内部读取，确保 .env 已加载。
  */
 
 export type ModelSource = 'env' | 'custom';

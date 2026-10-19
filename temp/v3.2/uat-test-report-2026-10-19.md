@@ -194,6 +194,7 @@
 | BUG-3.2-02 | 开启 `ALLOW_LOCAL_MODEL_HOSTS=1` 后，localhost 仍被白名单拒绝 | P0 | ✅ 已修复 | 本地地址在显式开启后直接放行（含任意端口），并保留 HTTPS 限制用于非本地地址 |
 | BUG-3.2-03 | 测试接口 `max_tokens=8` 对推理模型过小，DeepSeek V4 Pro 的 reasoning tokens 耗尽预算，`content` 为空并报「模型未返回内容」 | P0 | ✅ 已修复 | 测试预算调整为 `max_tokens=256`；空内容且 `finish_reason=length` 时提示「模型未返回最终文本（可能被 max_tokens 截断）」 |
 | ENV-3.2-01 | `.env` 中 `DOUBAO_ENDPOINT_ID` 多写了一个 `ep-` 前缀，方舟返回 404 `InvalidEndpointOrModel.NotFound` | P0 | ✅ 已修复 | 改为实际接入点 ID `ep-20260614223719-2z6p7`；代码本身无问题，属于配置笔误 |
+| BUG-3.2-04 | Vercel 部署后所有 `/api/*` 返回 500 `FUNCTION_INVOCATION_FAILED`：Vercel Node File Trace 不打包 `api/` 下的跨文件相对导入，`api/_model.ts` 未进入各函数包 | P0 | ✅ 已修复 | 将模型核心内联到 `api/generate.ts`、`api/models/index.ts`、`api/models/test.ts`，每个函数自包含，只 import `hono`；`api/_model.ts` 作为内联源并通过 `.vercelignore` 排除 |
 
 ---
 

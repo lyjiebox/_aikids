@@ -426,14 +426,16 @@ server/src/
     └── generate.ts             # 修改：透传模型入参、扩展响应
 
 api/
-├── _model.ts                   # 新增：与 server/src/services/model.ts 对等（Vercel 共享）
-├── generate.ts                 # 修改：使用 _model.ts
+├── _model.ts                   # 新增：模型核心内联源（与 server 对等；不直接 import，.vercelignore 排除）
+├── generate.ts                 # 修改：内联模型核心（自包含，只 import hono）
 └── models/
-    ├── index.ts                # 新增：GET /api/models
-    └── test.ts                 # 新增：POST /api/models/test
+    ├── index.ts                # 新增：GET /api/models（自包含）
+    └── test.ts                 # 新增：POST /api/models/test（自包含）
 ```
 
 > `api/` 与 `server/` 是项目既有的双后端模式，模型逻辑需保持对等。V3.2 不强行合并两套实现，避免改变现有构建/部署结构；UAT 通过同一组 API 用例分别验证两端。
+>
+> **Vercel 部署注意**：Vercel 的 Node File Trace 不会把 `api/` 目录下的跨文件相对导入打包进 sibling function，运行时会出现 `ERR_MODULE_NOT_FOUND` / `FUNCTION_INVOCATION_FAILED`。因此模型核心由 `temp/v3.2/inline-api-model.mjs` 内联到每个 API 函数；`api/_model.ts` 仅作为内联源保留，并通过 `.vercelignore` 排除，不参与部署。每个函数只依赖 `hono`（node_modules），保证自包含。
 
 ### 6.2 `model.ts` 主要函数
 
