@@ -34,19 +34,29 @@ import LoadingAnimation from '../components/LoadingAnimation';
 import { VoiceInput } from '../components/VoiceInput';
 import './Create.css';
 
+interface RemixContext {
+  templateId: string;
+  remixFrom: string;
+  remixInstruction: string;
+  originalUserPrompt?: string;
+  originalTitle?: string;
+  originalGameHtml?: string;
+  originalGameHtmlPreview?: string;
+}
+
 function Create() {
   const [searchParams] = useSearchParams();     // URL 参数（预选模板/Remix）
   const navigate = useNavigate();
   const { state, addWork, incrementRemixCount } = useAppContext();
-  const [remixContext, setRemixContext] = useState(null);
+  const [remixContext, setRemixContext] = useState<RemixContext | null>(null);
   
   const [selectedTemplate, setSelectedTemplate] = useState('free');  // 当前选中的模板
   const [userInput, setUserInput] = useState('');                     // 用户输入文本
   const [step, setStep] = useState(1);                                // 当前步骤
   const [isGenerating, setIsGenerating] = useState(false);            // 是否正在生成
-  const [engine, setEngine] = useState(null);                         // AI 引擎类型
-  const [usedModelName, setUsedModelName] = useState(null);           // 实际使用的模型名
-  const [fallbackWarning, setFallbackWarning] = useState(null);       // 降级提示
+  const [engine, setEngine] = useState<string | null>(null);                         // AI 引擎类型
+  const [usedModelName, setUsedModelName] = useState<string | null>(null);           // 实际使用的模型名
+  const [fallbackWarning, setFallbackWarning] = useState<string | null>(null);       // 降级提示
   const [elapsedSeconds, setElapsedSeconds] = useState(0);            // 生成耗时（秒）
   const startTimeRef = useRef<number>(0);                             // 生成开始时间戳
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null); // 计时器引用
@@ -76,7 +86,7 @@ function Create() {
         return;
       }
       try {
-        const ctx = JSON.parse(raw);
+        const ctx = JSON.parse(raw) as RemixContext;
         setRemixContext(ctx);
         setSelectedTemplate(ctx.templateId);
         setUserInput(ctx.remixInstruction);
@@ -101,7 +111,7 @@ function Create() {
   /**
    * Remix 生成：复用原有生成流程，传递 Remix 字段
    */
-  const handleRemixGenerate = async (ctx) => {
+  const handleRemixGenerate = async (ctx: RemixContext) => {
     setStep(3);
     setIsGenerating(true);
     setEngine('pending');
@@ -352,7 +362,7 @@ function Create() {
           <h2 className="section-title">选择主题（可选）</h2>
           <TemplatePicker
             selected={selectedTemplate}
-            onSelect={(id) => {
+            onSelect={(id: string) => {
               setSelectedTemplate(id);
               if (step < 2) setStep(2);
             }}

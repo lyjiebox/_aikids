@@ -19,9 +19,15 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Local npm cache (CI uses its own cache)
+.npm-cache/
+
 # Temporary files
 temp/*.html
 temp/*.log
+
+# Personal learning notes (not part of the project, never pushed)
+learning/
 
 # Test artifacts (keep test scripts, ignore heavy generated files)
 temp/**/chrome-profile*/

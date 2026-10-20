@@ -1,11 +1,22 @@
 {
   "name": "aikids-frontend",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p server/tsconfig.json --noEmit",
+    "test": "node scripts/run-tests.mjs",
+    "test:unit": "node --import tsx --test tests/unit/*.test.mjs",
+    "test:integration": "node --import tsx --test tests/integration/*.test.mjs",
+    "test:contract": "node --import tsx --test tests/contract/*.test.mjs",
+    "check:inline": "node scripts/inline-api-model.mjs --check",
+    "check:docs": "node scripts/check-docs.mjs",
+    "smoke:preview": "node scripts/smoke-preview.mjs",
+    "ci": "npm run typecheck && npm run build && npm run build:server && npm test && npm run check:inline && npm run check:docs && npm run smoke:preview",
+    "build:server": "tsc -p server/tsconfig.json",
+    "inline": "node scripts/inline-api-model.mjs"
   },
   "dependencies": {
     "hono": "^4.0.0",
@@ -18,6 +29,8 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.2.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
     "vite": "^5.0.0"
   }
 }

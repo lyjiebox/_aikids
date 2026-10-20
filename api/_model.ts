@@ -13,7 +13,7 @@
  * 重要：Vercel 的 Node File Trace 不会把 api/ 下的跨文件
  * 相对导入打包进 sibling function，运行时会出现
  * ERR_MODULE_NOT_FOUND / FUNCTION_INVOCATION_FAILED。
- * 因此本文件仅作为内联源，由 temp/v3.2/inline-api-model.mjs
+ * 因此本文件仅作为内联源，由 scripts/inline-api-model.mjs
  * 复制到以下三个自包含函数文件，请勿直接 import：
  *   - api/generate.ts
  *   - api/models/index.ts
