@@ -414,7 +414,7 @@ git revert <v3.4.0 commit>
 | UAT-3.4-12 | `npm run smoke:preview` | ✅ 通过 | 首页 200、`/create` 200、JS 资源 200、缺失资源 < 500 |
 | UAT-3.4-13 | workflow 静态检查 + `npm run ci` | ✅ 通过（本地） | `ci.yml OK`；`npm run ci` 退出码 0；远端 Actions 待推送后确认 |
 | UAT-3.4-14 | `git ls-files` 抽查 | ✅ 通过 | Taro 0 文件、`test-game.html` 0 文件、`temp/**/*.mjs` 0 文件 |
-| UAT-3.4-15 | `git tag --list "v3.4.0"` | ⏳ 待发布步骤 | 提交后创建 annotated tag 并回填哈希 |
+| UAT-3.4-15 | `git tag --list "v3.4.0"` | ✅ 通过 | annotated tag `v3.4.0` 已创建，指向发布提交（`git rev-list -n1 v3.4.0` 可复核） |
 | UAT-3.4-16 | `cd server && npx tsx test-generate.ts` | ⏭️ 未执行（P2） | 会消耗真实模型额度；本版本未改生成逻辑，CI 以测试桩覆盖协议与分支 |
 | UAT-3.4-17 | Chrome Headless 路由抽查 | ✅ 通过 | `/`、`/create`、`/gallery`、`/settings`、`/settings/models`、`/play/demo` 均渲染预期内容 |
 
@@ -424,6 +424,7 @@ git revert <v3.4.0 commit>
 - 构建产物冒烟时 `vite preview` 自动停止，无端口占用。
 - Chrome Headless 抽查时后端未启动，首页模型选择器显示预期的「API 请求失败」提示；这是预览环境无 API 的预期表现，不是回归缺陷（`/create` 等页面渲染正常）。
 - Vercel 线上预览：本机未安装/登录 Vercel CLI（无 `~/.vercel`），本轮以本地 `vite preview` 冒烟替代；未伪造线上结果。推送后由 Vercel 自动构建，GitHub Actions 确认 CI。
+- 发布 tag：`v3.4.0` 为 annotated tag，创建于 2026-10-20；发布提交包含本 UAT 记录、CHANGELOG、design 与全部测试资产。
 
 ### 15.1 通过标准
 
