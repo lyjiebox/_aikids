@@ -5,6 +5,8 @@
 > 编写日期：2026-10-19
 > 说明：在 V3.1 基础上新增 Web 端模型选择、内置模型展示、自定义模型增删改查与模型测试能力；不改变游戏生成的主流程与 V3.1 System Prompt。
 
+> 迁移说明（V3.4）：本文中的 `temp/v3.2/*.mjs` 测试脚本已迁移到 `tests/` 并在 V3.4 删除；文中旧路径仅作历史记录保留。
+
 ---
 
 ## 1. 版本目标与范围
@@ -435,7 +437,7 @@ api/
 
 > `api/` 与 `server/` 是项目既有的双后端模式，模型逻辑需保持对等。V3.2 不强行合并两套实现，避免改变现有构建/部署结构；UAT 通过同一组 API 用例分别验证两端。
 >
-> **Vercel 部署注意**：Vercel 的 Node File Trace 不会把 `api/` 目录下的跨文件相对导入打包进 sibling function，运行时会出现 `ERR_MODULE_NOT_FOUND` / `FUNCTION_INVOCATION_FAILED`。因此模型核心由 `temp/v3.2/inline-api-model.mjs` 内联到每个 API 函数；`api/_model.ts` 仅作为内联源保留，并通过 `.vercelignore` 排除，不参与部署。每个函数只依赖 `hono`（node_modules），保证自包含。
+> **Vercel 部署注意**：Vercel 的 Node File Trace 不会把 `api/` 目录下的跨文件相对导入打包进 sibling function，运行时会出现 `ERR_MODULE_NOT_FOUND` / `FUNCTION_INVOCATION_FAILED`。因此模型核心由 `scripts/inline-api-model.mjs` 内联到每个 API 函数；`api/_model.ts` 仅作为内联源保留，并通过 `.vercelignore` 排除，不参与部署。每个函数只依赖 `hono`（node_modules），保证自包含。
 
 ### 6.2 `model.ts` 主要函数
 

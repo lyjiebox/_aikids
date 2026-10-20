@@ -30,6 +30,7 @@
 - `README.md`、`DEPLOY.md` 更新目录结构、测试命令与本地开发步骤。
 - `docs/proposal.md` 标记 V3.4 完成，并修正 V3.3 遗留的版本归属（后处理增强引擎归 V4.0）。
 - `docs/design-v3.3.md` 末尾的后续版本说明从 V3.4 修正为 V4.0。
+- `docs/design-v3.2/3.3.md`、`docs/uat-v3.2/3.3.md` 增加测试脚本迁移说明，避免读者继续引用已删除的 `temp/*.mjs`。
 
 ### Removed
 

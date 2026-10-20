@@ -418,5 +418,6 @@ push / pull_request
 | `tests/contract/*` | 新增生产函数契约测试 |
 | `api/_model.ts`、`api/generate.ts`、`api/models/*.ts` | 仅更新内联来源注释（行为不变） |
 | `README.md`、`DEPLOY.md`、`docs/proposal.md` | 版本、命令、目录、验收状态同步 |
+| `docs/design-v3.2/3.3.md`、`docs/uat-v3.2/3.3.md` | 增加测试脚本迁移说明，避免引用已删除的 `temp/*.mjs` |
 | `client-taro-broken/`、`test-game.html` | 删除 |
 | `temp/v3.2/*.mjs`、`temp/v3.3/*.mjs` | 删除（已迁移），报告保留 |
