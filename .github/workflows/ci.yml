@@ -48,7 +48,7 @@ jobs:
       - name: Core regression (unit + integration + contract)
         run: npm test
 
-      - name: Check inlined model core
+      - name: Check generated API functions
         run: npm run check:inline
 
       - name: Check docs/version consistency

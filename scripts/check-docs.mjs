@@ -69,11 +69,13 @@ if (!exists('README.md')) {
 const requiredScripts = [
   'typecheck',
   'build',
+  'build:api',
   'test',
   'ci',
   'check:inline',
   'check:docs',
   'smoke:preview',
+  'bench',
 ];
 for (const name of requiredScripts) {
   if (!pkg.scripts || typeof pkg.scripts[name] !== 'string') {
@@ -82,13 +84,41 @@ for (const name of requiredScripts) {
 }
 
 const testGroups = {
-  unit: ['tests/unit/storage.test.mjs', 'tests/unit/model-utils.test.mjs', 'tests/unit/remix-core.test.mjs'],
+  unit: [
+    'tests/unit/storage.test.mjs',
+    'tests/unit/model-utils.test.mjs',
+    'tests/unit/remix-core.test.mjs',
+    'tests/unit/generate-service.test.mjs',
+    'tests/unit/metrics.test.mjs',
+  ],
   integration: ['tests/integration/generate.test.mjs', 'tests/integration/remix.test.mjs'],
-  contract: ['tests/contract/production-api.test.mjs'],
+  contract: [
+    'tests/contract/production-api.test.mjs',
+    'tests/contract/parity.test.mjs',
+  ],
 };
 for (const [group, files] of Object.entries(testGroups)) {
   for (const file of files) {
     if (!exists(file)) errors.push(`缺少 ${group} 测试：${file}`);
+  }
+}
+
+// 生成物必须带 banner，且不含旧的内联源/跨目录导入
+for (const file of [
+  'api/generate.ts',
+  'api/models/index.ts',
+  'api/models/test.ts',
+]) {
+  if (!exists(file)) {
+    errors.push(`缺少生成物：${file}`);
+    continue;
+  }
+  const content = fs.readFileSync(path.join(root, file), 'utf8');
+  if (!content.includes('AUTO-GENERATED FILE')) {
+    errors.push(`${file} 缺少 AUTO-GENERATED banner`);
+  }
+  if (/from\s+['"][^'"]*(?:\.\.\/server\/|_model['"])/.test(content)) {
+    errors.push(`${file} 仍包含跨目录相对导入`);
   }
 }
 

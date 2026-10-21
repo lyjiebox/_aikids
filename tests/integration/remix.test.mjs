@@ -198,3 +198,28 @@ test('REMIX-10 响应不回显 API Key', async () => {
   assert.ok(!res.text.includes('test-key'), '响应不应回显 API Key');
   assert.ok(!res.text.includes('apiKey'), '响应不应包含 apiKey 字段');
 });
+
+test('REMIX-11 只有 remixFrom 没有指令时按普通生成处理', async () => {
+  const res = await postJson(backend.baseUrl, '/api/generate', {
+    templateId: 'animal',
+    userPrompt: '做一个动物收集游戏',
+    remixFrom: 'work-original-1',
+    modelConfig: customModel(stub.chatUrl),
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.json?.success, true);
+  assert.equal(res.json?.data?.engine, 'volcengine');
+  assert.equal('remixMode' in (res.json?.data || {}), false);
+  assert.equal('remixFallback' in (res.json?.data || {}), false);
+});
+
+test('REMIX-12 模型输出为空时 Remix 保留原游戏', async () => {
+  const res = await postJson(backend.baseUrl, '/api/generate', remixBody('stub-empty'));
+  assert.equal(res.status, 200);
+  assert.equal(res.json?.success, true);
+  const data = res.json?.data || {};
+  assert.equal(data.remixFallback, true);
+  assert.equal(data.remixMode, 'fallback');
+  assert.equal(data.gameHtml, sourceGame);
+  assert.match(data.warning || '', /保留原游戏/);
+});

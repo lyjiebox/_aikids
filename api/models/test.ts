@@ -1,693 +1,513 @@
 /**
- * ============================================================
- * Vercel Serverless Function: POST /api/models/test
- * ============================================================
+ * AUTO-GENERATED FILE — DO NOT EDIT.
  *
- * 测试模型配置能否完成调用并返回文本。
- * 不生成游戏、不写作品、不消耗 Mock。
+ * Source: api-src/models-test.ts + server/src/**
+ * Regenerate: npm run build:api
  */
+// @ts-nocheck
 
-import { Hono } from 'hono';
 
-// ===== BEGIN inlined model core (source: api/_model.ts) =====
-/**
- * ============================================================
- * 模型注册与调用（Vercel 内联源）
- * ============================================================
- *
- * 职责：
- * 1. 读取环境变量中的内置模型（Doubao / DeepSeek）
- * 2. 校验并解析请求中的自定义模型配置
- * 3. 解析默认模型（GAME_MODEL → 第一个可用内置模型）
- * 4. 统一调用 OpenAI 兼容的 Chat Completions 接口
- * 5. 提供模型测试（只验证调用与返回，不生成游戏）
- *
- * 重要：Vercel 的 Node File Trace 不会把 api/ 下的跨文件
- * 相对导入打包进 sibling function，运行时会出现
- * ERR_MODULE_NOT_FOUND / FUNCTION_INVOCATION_FAILED。
- * 因此本文件仅作为内联源，由 scripts/inline-api-model.mjs
- * 复制到以下三个自包含函数文件，请勿直接 import：
- *   - api/generate.ts
- *   - api/models/index.ts
- *   - api/models/test.ts
- * 本文件与 server/src/services/model.ts 保持对等。
- * 所有环境变量都在函数内部读取，确保 .env 已加载。
- */
+// api-src/models-test.ts
+import { Hono as Hono2 } from "hono";
 
-export type ModelSource = 'env' | 'custom';
+// server/src/routes/models.ts
+import { Hono } from "hono";
 
-export interface EnvModelInfo {
-  id: string;
-  name: string;
-  source: 'env';
-  available: boolean;
-  unavailableReason?: string;
-  baseUrl: string;
-  modelPreview: string;
-  hasApiKey: boolean;
-  isDefault: boolean;
-}
+// server/src/types/index.ts
+var ERROR_CODES = {
+  /** 请求体不是合法 JSON */
+  INVALID_JSON: "INVALID_JSON",
+  /** JSON 合法但不是对象 */
+  INVALID_BODY: "INVALID_BODY",
+  /** userPrompt 缺失/空白 */
+  EMPTY_PROMPT: "EMPTY_PROMPT",
+  /** 未捕获的服务端错误 */
+  GENERATION_FAILED: "GENERATION_FAILED",
+  /** 自定义模型配置不合法 */
+  MODEL_CONFIG_INVALID: "MODEL_CONFIG_INVALID",
+  /** 未知内置模型 */
+  MODEL_NOT_FOUND: "MODEL_NOT_FOUND",
+  /** 内置模型缺少环境变量 */
+  MODEL_UNAVAILABLE: "MODEL_UNAVAILABLE",
+  /** 模型测试未提供模型参数 */
+  MISSING_MODEL: "MISSING_MODEL",
+  /** 没有任何可用模型 */
+  NO_MODEL: "NO_MODEL",
+  /** 模型调用失败（通用） */
+  MODEL_CALL_FAILED: "MODEL_CALL_FAILED",
+  /** 调用超时 */
+  TIMEOUT: "TIMEOUT",
+  /** 无法连接上游 */
+  NETWORK: "NETWORK",
+  /** 鉴权失败 */
+  AUTH: "AUTH",
+  /** 地址/模型不存在 */
+  NOT_FOUND: "NOT_FOUND",
+  /** 限流/额度不足 */
+  RATE_LIMIT: "RATE_LIMIT",
+  /** 上游 5xx */
+  UPSTREAM_5XX: "UPSTREAM_5XX",
+  /** 上游其他错误 */
+  UPSTREAM_ERROR: "UPSTREAM_ERROR",
+  /** 上游返回非 JSON */
+  BAD_RESPONSE: "BAD_RESPONSE",
+  /** 上游返回空内容 */
+  EMPTY_RESPONSE: "EMPTY_RESPONSE",
+  /** 模型输出无法解析为游戏 */
+  OUTPUT_PARSE_FAILED: "OUTPUT_PARSE_FAILED",
+  /** 未知错误 */
+  UNKNOWN: "UNKNOWN"
+};
 
-export interface CustomModelPayload {
-  id?: string;
-  name: string;
-  baseUrl: string;
-  model: string;
-  apiKey?: string;
-}
-
-export interface ResolvedModel {
-  id: string;
-  name: string;
-  source: ModelSource;
-  baseUrl: string;
-  model: string;
-  apiKey: string;
-}
-
-export interface ModelCatalog {
-  models: EnvModelInfo[];
-  defaultModelId: string | null;
-  defaultModelName: string | null;
-  hasServerApiKey: boolean;
-}
-
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-export interface ModelTestResult {
-  ok: boolean;
-  latencyMs: number;
-  modelName: string;
-  source: ModelSource | 'none';
-  reply?: string;
-  message?: string;
-  code?: string;
-  status?: number;
-}
-
-/** 请求中的模型配置不合法（参数问题，应返回 400） */
-export class ModelConfigError extends Error {
-  readonly code: string;
-
-  constructor(message: string, code = 'MODEL_CONFIG_INVALID') {
+// server/src/errors.ts
+var ModelConfigError = class extends Error {
+  code;
+  constructor(message, code = ERROR_CODES.MODEL_CONFIG_INVALID) {
     super(message);
-    this.name = 'ModelConfigError';
+    this.name = "ModelConfigError";
     this.code = code;
   }
-}
-
-/** 调用模型失败（上游/网络/超时，可降级 Mock） */
-export class ModelCallError extends Error {
-  readonly code: string;
-  readonly status?: number;
-  readonly latencyMs: number;
-
-  constructor(
-    message: string,
-    options: { code?: string; status?: number; latencyMs?: number } = {}
-  ) {
+};
+var ModelCallError = class extends Error {
+  code;
+  status;
+  latencyMs;
+  constructor(message, options = {}) {
     super(message);
-    this.name = 'ModelCallError';
-    this.code = options.code || 'MODEL_CALL_FAILED';
+    this.name = "ModelCallError";
+    this.code = options.code || ERROR_CODES.MODEL_CALL_FAILED;
     this.status = options.status;
     this.latencyMs = options.latencyMs ?? 0;
   }
-}
+};
 
-// ============================================================
-// 常量
-// ============================================================
-
-const DEFAULT_ARK_BASE_URL =
-  'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
-
-const DEFAULT_ALLOWED_HOSTS = [
-  'ark.cn-beijing.volces.com',
-  'api.deepseek.com',
-  'api.openai.com',
-  'open.bigmodel.cn',
-  'dashscope.aliyuncs.com',
-  'api.moonshot.cn',
+// server/src/services/model.ts
+var DEFAULT_ARK_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+var DEFAULT_ALLOWED_HOSTS = [
+  "ark.cn-beijing.volces.com",
+  "api.deepseek.com",
+  "api.openai.com",
+  "open.bigmodel.cn",
+  "dashscope.aliyuncs.com",
+  "api.moonshot.cn"
 ];
-
-interface EnvModelDef {
-  id: string;
-  name: string;
-  endpointEnvVars: string[];
-  primaryEndpointEnv: string;
-}
-
-const ENV_MODEL_DEFS: EnvModelDef[] = [
+var ENV_MODEL_DEFS = [
   {
-    id: 'doubao',
-    name: 'Doubao Seed 2.0 Pro',
-    endpointEnvVars: ['DOUBAO_ENDPOINT_ID', 'VOLCENGINE_ENDPOINT_ID'],
-    primaryEndpointEnv: 'DOUBAO_ENDPOINT_ID',
+    id: "doubao",
+    name: "Doubao Seed 2.0 Pro",
+    endpointEnvVars: ["DOUBAO_ENDPOINT_ID", "VOLCENGINE_ENDPOINT_ID"],
+    primaryEndpointEnv: "DOUBAO_ENDPOINT_ID"
   },
   {
-    id: 'deepseek',
-    name: 'DeepSeek V4 Pro',
-    endpointEnvVars: ['DEEPSEEK_ENDPOINT_ID'],
-    primaryEndpointEnv: 'DEEPSEEK_ENDPOINT_ID',
-  },
+    id: "deepseek",
+    name: "DeepSeek V4 Pro",
+    endpointEnvVars: ["DEEPSEEK_ENDPOINT_ID"],
+    primaryEndpointEnv: "DEEPSEEK_ENDPOINT_ID"
+  }
 ];
-
-interface InternalEnvModel {
-  info: EnvModelInfo;
-  endpoint: string;
-  apiKey: string;
-}
-
-// ============================================================
-// 环境变量读取（全部延迟到调用时，确保 .env 已加载）
-// ============================================================
-
-function readEnv(name: string): string {
+function readEnv(name) {
   const value = process.env[name];
-  return typeof value === 'string' ? value.trim() : '';
+  return typeof value === "string" ? value.trim() : "";
 }
-
-function getServerApiKey(): string {
-  return readEnv('VOLCENGINE_API_KEY');
+function getServerApiKey() {
+  return readEnv("VOLCENGINE_API_KEY");
 }
-
-function getArkBaseUrl(): string {
-  return readEnv('VOLCENGINE_BASE_URL') || DEFAULT_ARK_BASE_URL;
+function getArkBaseUrl() {
+  return readEnv("VOLCENGINE_BASE_URL") || DEFAULT_ARK_BASE_URL;
 }
-
-function getEndpoint(def: EnvModelDef): string {
+function getEndpoint(def) {
   for (const key of def.endpointEnvVars) {
     const value = readEnv(key);
     if (value) return value;
   }
-  return '';
+  return "";
 }
-
-function getAllowedHosts(): string[] {
-  const raw = readEnv('ALLOWED_MODEL_HOSTS');
+function getAllowedHosts() {
+  const raw = readEnv("ALLOWED_MODEL_HOSTS");
   if (!raw) return DEFAULT_ALLOWED_HOSTS;
-  return raw
-    .split(',')
-    .map((item) => item.trim().toLowerCase().replace(/\.$/, ''))
-    .filter(Boolean);
+  return raw.split(",").map((item) => item.trim().toLowerCase().replace(/\.$/, "")).filter(Boolean);
 }
-
-function isLocalHostsAllowed(): boolean {
-  const value = readEnv('ALLOW_LOCAL_MODEL_HOSTS').toLowerCase();
-  return value === '1' || value === 'true' || value === 'yes';
+function isLocalHostsAllowed() {
+  const value = readEnv("ALLOW_LOCAL_MODEL_HOSTS").toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
 }
-
-// ============================================================
-// 工具函数
-// ============================================================
-
-function normalizeHostname(value: string): string {
-  return value.trim().toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+function normalizeHostname(value) {
+  return value.trim().toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
 }
-
-function isLocalHostname(hostname: string): boolean {
+function isLocalHostname(hostname) {
   const host = normalizeHostname(hostname);
-  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
 }
-
-function maskSecret(value: string): string {
-  if (!value) return '';
-  if (value.length <= 8) return `${value.slice(0, 2)}…`;
-  return `${value.slice(0, 4)}…${value.slice(-4)}`;
+function maskSecret(value) {
+  if (!value) return "";
+  if (value.length <= 8) return `${value.slice(0, 2)}\u2026`;
+  return `${value.slice(0, 4)}\u2026${value.slice(-4)}`;
 }
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+function asRecord(value) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;
   }
-  return value as Record<string, unknown>;
+  return value;
 }
-
-function readString(
-  record: Record<string, unknown>,
-  key: string
-): string {
+function readString(record, key) {
   const value = record[key];
-  return typeof value === 'string' ? value.trim() : '';
+  return typeof value === "string" ? value.trim() : "";
 }
-
-function redact(text: string): string {
-  return text
-    .replace(/sk-[A-Za-z0-9_-]{6,}/g, 'sk-***')
-    .replace(/Bearer\s+[A-Za-z0-9._-]+/gi, 'Bearer ***')
-    .slice(0, 200);
+function redact(text) {
+  return text.replace(/sk-[A-Za-z0-9_-]{6,}/g, "sk-***").replace(/Bearer\s+[A-Za-z0-9._-]+/gi, "Bearer ***").slice(0, 200);
 }
-
-function isAbortError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'name' in error &&
-    (error as { name?: unknown }).name === 'AbortError'
-  );
+function isAbortError(error) {
+  return typeof error === "object" && error !== null && "name" in error && error.name === "AbortError";
 }
-
-// ============================================================
-// 内置模型
-// ============================================================
-
-function buildEnvModels(): InternalEnvModel[] {
+function readTokenCount(record, key) {
+  const value = record[key];
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return void 0;
+  }
+  return Math.floor(value);
+}
+function parseTokenUsage(payload) {
+  const record = asRecord(payload);
+  const usage = asRecord(record?.usage);
+  if (!usage) return void 0;
+  const promptTokens = readTokenCount(usage, "prompt_tokens");
+  const completionTokens = readTokenCount(usage, "completion_tokens");
+  if (promptTokens === void 0 && completionTokens === void 0) {
+    return void 0;
+  }
+  const totalTokens = readTokenCount(usage, "total_tokens") ?? (promptTokens ?? 0) + (completionTokens ?? 0);
+  return {
+    promptTokens: promptTokens ?? 0,
+    completionTokens: completionTokens ?? 0,
+    totalTokens
+  };
+}
+function buildEnvModels() {
   const apiKey = getServerApiKey();
   const baseUrl = getArkBaseUrl();
-
   return ENV_MODEL_DEFS.map((def) => {
     const endpoint = getEndpoint(def);
     const available = Boolean(endpoint && apiKey);
-
-    let unavailableReason: string | undefined;
+    let unavailableReason;
     if (!endpoint) {
-      unavailableReason = `未配置 ${def.primaryEndpointEnv}`;
+      unavailableReason = `\u672A\u914D\u7F6E ${def.primaryEndpointEnv}`;
     } else if (!apiKey) {
-      unavailableReason = '未配置 VOLCENGINE_API_KEY';
+      unavailableReason = "\u672A\u914D\u7F6E VOLCENGINE_API_KEY";
     }
-
-    const info: EnvModelInfo = {
+    const info = {
       id: def.id,
       name: def.name,
-      source: 'env',
+      source: "env",
       available,
       baseUrl,
       modelPreview: maskSecret(endpoint),
       hasApiKey: Boolean(apiKey),
-      isDefault: false,
+      isDefault: false
     };
     if (unavailableReason) info.unavailableReason = unavailableReason;
-
     return { info, endpoint, apiKey };
   });
 }
-
-function toResolvedModel(model: InternalEnvModel): ResolvedModel {
+function toResolvedModel(model) {
   return {
     id: model.info.id,
     name: model.info.name,
-    source: 'env',
+    source: "env",
     baseUrl: model.info.baseUrl,
     model: model.endpoint,
-    apiKey: model.apiKey,
+    apiKey: model.apiKey
   };
 }
-
-/**
- * 解析默认模型：GAME_MODEL（可用时）→ 第一个可用内置模型 → null
- */
-export function resolveDefaultModel(): ResolvedModel | null {
+function resolveDefaultModel() {
   const available = buildEnvModels().filter((model) => model.info.available);
   if (available.length === 0) return null;
-
-  const preferredId = readEnv('GAME_MODEL').toLowerCase();
-  const preferred = preferredId
-    ? available.find((model) => model.info.id === preferredId)
-    : undefined;
-
+  const preferredId = readEnv("GAME_MODEL").toLowerCase();
+  const preferred = preferredId ? available.find((model) => model.info.id === preferredId) : void 0;
   return toResolvedModel(preferred || available[0]);
 }
-
-/**
- * 获取内置模型目录（脱敏，不含完整 endpoint / API Key）
- */
-export function getModelCatalog(): ModelCatalog {
+function getModelCatalog() {
   const defaultModel = resolveDefaultModel();
   const models = buildEnvModels().map((model) => ({
     ...model.info,
-    isDefault: model.info.id === defaultModel?.id,
+    isDefault: model.info.id === defaultModel?.id
   }));
-
   return {
     models,
     defaultModelId: defaultModel?.id ?? null,
     defaultModelName: defaultModel?.name ?? null,
-    hasServerApiKey: Boolean(getServerApiKey()),
+    hasServerApiKey: Boolean(getServerApiKey())
   };
 }
-
-// ============================================================
-// 自定义模型校验
-// ============================================================
-
-function validateBaseUrl(raw: string): URL {
-  let url: URL;
+function validateBaseUrl(raw) {
+  let url;
   try {
     url = new URL(raw);
   } catch {
-    throw new ModelConfigError('接口地址不是合法的 URL');
+    throw new ModelConfigError("\u63A5\u53E3\u5730\u5740\u4E0D\u662F\u5408\u6CD5\u7684 URL");
   }
-
   if (url.username || url.password) {
-    throw new ModelConfigError('接口地址不能包含账号密码');
+    throw new ModelConfigError("\u63A5\u53E3\u5730\u5740\u4E0D\u80FD\u5305\u542B\u8D26\u53F7\u5BC6\u7801");
   }
-
   const hostname = normalizeHostname(url.hostname);
   const local = isLocalHostname(hostname);
   const allowLocal = isLocalHostsAllowed();
-
   if (local && !allowLocal) {
     throw new ModelConfigError(
-      '本地接口地址未开启：请设置 ALLOW_LOCAL_MODEL_HOSTS=1（仅建议本地测试）'
+      "\u672C\u5730\u63A5\u53E3\u5730\u5740\u672A\u5F00\u542F\uFF1A\u8BF7\u8BBE\u7F6E ALLOW_LOCAL_MODEL_HOSTS=1\uFF08\u4EC5\u5EFA\u8BAE\u672C\u5730\u6D4B\u8BD5\uFF09"
     );
   }
-
-  // 本地地址在显式开启后直接放行（含任意端口）
   if (local && allowLocal) {
     return url;
   }
-
   const hosts = getAllowedHosts();
-  const fullHost = url.host.toLowerCase().replace(/\.$/, '');
+  const fullHost = url.host.toLowerCase().replace(/\.$/, "");
   const allowed = hosts.some(
     (entry) => entry === fullHost || entry === hostname
   );
-
   if (!allowed) {
     throw new ModelConfigError(
-      '接口地址不在白名单内，请使用支持的模型服务地址'
+      "\u63A5\u53E3\u5730\u5740\u4E0D\u5728\u767D\u540D\u5355\u5185\uFF0C\u8BF7\u4F7F\u7528\u652F\u6301\u7684\u6A21\u578B\u670D\u52A1\u5730\u5740"
     );
   }
-
-  if (url.protocol !== 'https:') {
-    throw new ModelConfigError('接口地址必须使用 HTTPS');
+  if (url.protocol !== "https:") {
+    throw new ModelConfigError("\u63A5\u53E3\u5730\u5740\u5FC5\u987B\u4F7F\u7528 HTTPS");
   }
-
   return url;
 }
-
-function resolveCustomModel(input: unknown): ResolvedModel {
+function resolveCustomModel(input) {
   const record = asRecord(input);
   if (!record) {
-    throw new ModelConfigError('模型配置格式错误');
+    throw new ModelConfigError("\u6A21\u578B\u914D\u7F6E\u683C\u5F0F\u9519\u8BEF");
   }
-
-  const name = readString(record, 'name');
+  const name = readString(record, "name");
   if (!name || name.length > 30) {
-    throw new ModelConfigError('模型名称长度需为 1-30 个字符');
+    throw new ModelConfigError("\u6A21\u578B\u540D\u79F0\u957F\u5EA6\u9700\u4E3A 1-30 \u4E2A\u5B57\u7B26");
   }
-
-  const baseUrl = readString(record, 'baseUrl');
+  const baseUrl = readString(record, "baseUrl");
   if (!baseUrl) {
-    throw new ModelConfigError('请填写接口地址');
+    throw new ModelConfigError("\u8BF7\u586B\u5199\u63A5\u53E3\u5730\u5740");
   }
   const url = validateBaseUrl(baseUrl);
-
-  const model = readString(record, 'model');
+  const model = readString(record, "model");
   if (!model || model.length > 200) {
-    throw new ModelConfigError('模型 ID / 接入点长度需为 1-200 个字符');
+    throw new ModelConfigError("\u6A21\u578B ID / \u63A5\u5165\u70B9\u957F\u5EA6\u9700\u4E3A 1-200 \u4E2A\u5B57\u7B26");
   }
-
-  let apiKey = readString(record, 'apiKey');
+  let apiKey = readString(record, "apiKey");
   if (apiKey.length > 500) {
-    throw new ModelConfigError('API Key 长度不能超过 500 个字符');
+    throw new ModelConfigError("API Key \u957F\u5EA6\u4E0D\u80FD\u8D85\u8FC7 500 \u4E2A\u5B57\u7B26");
   }
-
   if (!apiKey) {
-    // 仅火山方舟域名允许回退服务端默认 Key
-    if (normalizeHostname(url.hostname) === 'ark.cn-beijing.volces.com') {
+    if (normalizeHostname(url.hostname) === "ark.cn-beijing.volces.com") {
       apiKey = getServerApiKey();
     }
     if (!apiKey) {
       throw new ModelConfigError(
-        '缺少 API Key：非火山方舟接口需在模型配置中填写 API Key'
+        "\u7F3A\u5C11 API Key\uFF1A\u975E\u706B\u5C71\u65B9\u821F\u63A5\u53E3\u9700\u5728\u6A21\u578B\u914D\u7F6E\u4E2D\u586B\u5199 API Key"
       );
     }
   }
-
-  const rawId = readString(record, 'id');
-  const id = rawId ? rawId.slice(0, 100) : 'custom';
-
-  return { id, name, source: 'custom', baseUrl, model, apiKey };
+  const rawId = readString(record, "id");
+  const id = rawId ? rawId.slice(0, 100) : "custom";
+  return { id, name, source: "custom", baseUrl, model, apiKey };
 }
-
-/**
- * 解析请求中的模型。
- *
- * - 携带 modelConfig → 自定义模型
- * - 携带 modelId / model → 内置模型（不可用则抛 ModelConfigError）
- * - 都没携带 → 默认模型（GAME_MODEL）
- * - 没有任何可用模型 → null（由调用方 Mock 兜底）
- */
-export function resolveRequestModel(input: {
-  modelId?: unknown;
-  model?: unknown;
-  modelConfig?: unknown;
-}): ResolvedModel | null {
-  if (input.modelConfig !== undefined && input.modelConfig !== null) {
+function resolveRequestModel(input) {
+  if (input.modelConfig !== void 0 && input.modelConfig !== null) {
     return resolveCustomModel(input.modelConfig);
   }
-
-  const rawId =
-    typeof input.modelId === 'string'
-      ? input.modelId
-      : typeof input.model === 'string'
-        ? input.model
-        : '';
+  const rawId = typeof input.modelId === "string" ? input.modelId : typeof input.model === "string" ? input.model : "";
   const id = rawId.trim().toLowerCase();
-
   if (id) {
     const envModel = buildEnvModels().find((model) => model.info.id === id);
     if (!envModel) {
-      throw new ModelConfigError(`未知模型：${rawId.trim()}`, 'MODEL_NOT_FOUND');
+      throw new ModelConfigError(
+        `\u672A\u77E5\u6A21\u578B\uFF1A${rawId.trim()}`,
+        ERROR_CODES.MODEL_NOT_FOUND
+      );
     }
     if (!envModel.info.available) {
       throw new ModelConfigError(
-        `模型「${envModel.info.name}」未配置：${
-          envModel.info.unavailableReason || '缺少环境变量'
-        }`,
-        'MODEL_UNAVAILABLE'
+        `\u6A21\u578B\u300C${envModel.info.name}\u300D\u672A\u914D\u7F6E\uFF1A${envModel.info.unavailableReason || "\u7F3A\u5C11\u73AF\u5883\u53D8\u91CF"}`,
+        ERROR_CODES.MODEL_UNAVAILABLE
       );
     }
     return toResolvedModel(envModel);
   }
-
   return resolveDefaultModel();
 }
-
-// ============================================================
-// Chat Completions 调用
-// ============================================================
-
-export interface CallOptions {
-  maxTokens: number;
-  temperature: number;
-  timeoutMs: number;
-}
-
-export async function callChatCompletion(
-  model: ResolvedModel,
-  messages: ChatMessage[],
-  options: CallOptions
-): Promise<{ text: string; latencyMs: number }> {
+async function callChatCompletion(model, messages, options) {
   const started = Date.now();
-  const timeoutMs = Math.max(1000, options.timeoutMs);
+  const timeoutMs = Math.max(1e3, options.timeoutMs);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
-    let response: Response;
+    let response;
     try {
       response = await fetch(model.baseUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${model.apiKey}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${model.apiKey}`
         },
         body: JSON.stringify({
           model: model.model,
           messages,
           max_tokens: options.maxTokens,
-          temperature: options.temperature,
+          temperature: options.temperature
         }),
         signal: controller.signal,
-        redirect: 'error',
+        redirect: "error"
       });
     } catch (error) {
-      const latencyMs = Date.now() - started;
+      const latencyMs2 = Date.now() - started;
       if (isAbortError(error)) {
         throw new ModelCallError(
-          `请求超时（${Math.round(timeoutMs / 1000)} 秒）`,
-          { code: 'TIMEOUT', latencyMs }
+          `\u8BF7\u6C42\u8D85\u65F6\uFF08${Math.round(timeoutMs / 1e3)} \u79D2\uFF09`,
+          { code: ERROR_CODES.TIMEOUT, latencyMs: latencyMs2 }
         );
       }
       throw new ModelCallError(
-        '无法连接模型接口（请检查地址或重定向设置）',
-        { code: 'NETWORK', latencyMs }
+        "\u65E0\u6CD5\u8FDE\u63A5\u6A21\u578B\u63A5\u53E3\uFF08\u8BF7\u68C0\u67E5\u5730\u5740\u6216\u91CD\u5B9A\u5411\u8BBE\u7F6E\uFF09",
+        { code: ERROR_CODES.NETWORK, latencyMs: latencyMs2 }
       );
     }
-
     const latencyMs = Date.now() - started;
-
     if (!response.ok) {
-      let detail = '';
+      let detail = "";
       try {
         detail = redact(await response.text());
       } catch {
-        detail = '';
+        detail = "";
       }
       if (response.status === 401 || response.status === 403) {
-        throw new ModelCallError('鉴权失败，请检查 API Key', {
-          code: 'AUTH',
+        throw new ModelCallError("\u9274\u6743\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5 API Key", {
+          code: ERROR_CODES.AUTH,
           status: response.status,
-          latencyMs,
+          latencyMs
         });
       }
       if (response.status === 404) {
-        throw new ModelCallError('接口地址或模型 ID 不存在', {
-          code: 'NOT_FOUND',
+        throw new ModelCallError("\u63A5\u53E3\u5730\u5740\u6216\u6A21\u578B ID \u4E0D\u5B58\u5728", {
+          code: ERROR_CODES.NOT_FOUND,
           status: response.status,
-          latencyMs,
+          latencyMs
         });
       }
       if (response.status === 429) {
-        throw new ModelCallError('请求过于频繁或额度不足', {
-          code: 'RATE_LIMIT',
+        throw new ModelCallError("\u8BF7\u6C42\u8FC7\u4E8E\u9891\u7E41\u6216\u989D\u5EA6\u4E0D\u8DB3", {
+          code: ERROR_CODES.RATE_LIMIT,
           status: response.status,
-          latencyMs,
+          latencyMs
         });
       }
       if (response.status >= 500) {
-        throw new ModelCallError('模型服务暂时不可用', {
-          code: 'UPSTREAM_5XX',
+        throw new ModelCallError("\u6A21\u578B\u670D\u52A1\u6682\u65F6\u4E0D\u53EF\u7528", {
+          code: ERROR_CODES.UPSTREAM_5XX,
           status: response.status,
-          latencyMs,
+          latencyMs
         });
       }
       throw new ModelCallError(
-        `模型接口返回错误（HTTP ${response.status}）${
-          detail ? `：${detail}` : ''
-        }`,
-        { code: 'UPSTREAM_ERROR', status: response.status, latencyMs }
+        `\u6A21\u578B\u63A5\u53E3\u8FD4\u56DE\u9519\u8BEF\uFF08HTTP ${response.status}\uFF09${detail ? `\uFF1A${detail}` : ""}`,
+        {
+          code: ERROR_CODES.UPSTREAM_ERROR,
+          status: response.status,
+          latencyMs
+        }
       );
     }
-
-    let data: unknown;
+    let data;
     try {
       data = await response.json();
     } catch {
-      throw new ModelCallError('模型返回内容不是合法 JSON', {
-        code: 'BAD_RESPONSE',
+      throw new ModelCallError("\u6A21\u578B\u8FD4\u56DE\u5185\u5BB9\u4E0D\u662F\u5408\u6CD5 JSON", {
+        code: ERROR_CODES.BAD_RESPONSE,
         status: response.status,
-        latencyMs,
+        latencyMs
       });
     }
-
     const record = asRecord(data);
     const choices = record?.choices;
     const firstChoice = Array.isArray(choices) ? asRecord(choices[0]) : null;
     const message = firstChoice ? asRecord(firstChoice.message) : null;
     const content = message?.content;
     const finishReason = firstChoice?.finish_reason;
-
-    if (typeof content !== 'string' || !content.trim()) {
-      // 推理模型（如 DeepSeek V4 Pro）会先消耗 reasoning tokens，
-      // max_tokens 太小时 content 为空且 finish_reason=length。
-      const messageText =
-        finishReason === 'length'
-          ? '模型未返回最终文本（可能被 max_tokens 截断）'
-          : '模型未返回内容';
+    if (typeof content !== "string" || !content.trim()) {
+      const messageText = finishReason === "length" ? "\u6A21\u578B\u672A\u8FD4\u56DE\u6700\u7EC8\u6587\u672C\uFF08\u53EF\u80FD\u88AB max_tokens \u622A\u65AD\uFF09" : "\u6A21\u578B\u672A\u8FD4\u56DE\u5185\u5BB9";
       throw new ModelCallError(messageText, {
-        code: 'EMPTY_RESPONSE',
+        code: ERROR_CODES.EMPTY_RESPONSE,
         status: response.status,
-        latencyMs,
+        latencyMs
       });
     }
-
-    return { text: content, latencyMs };
+    return {
+      text: content,
+      latencyMs,
+      usage: parseTokenUsage(data)
+    };
   } finally {
     clearTimeout(timer);
   }
 }
-
-// ============================================================
-// 模型测试（只验证调用与返回，不生成游戏）
-// ============================================================
-
-function getTestTimeoutMs(): number {
-  const raw = Number(readEnv('MODEL_TEST_TIMEOUT_MS'));
-  if (!Number.isFinite(raw) || raw <= 0) return 20000;
-  return Math.min(Math.max(raw, 1000), 60000);
+function getTestTimeoutMs() {
+  const raw = Number(readEnv("MODEL_TEST_TIMEOUT_MS"));
+  if (!Number.isFinite(raw) || raw <= 0) return 2e4;
+  return Math.min(Math.max(raw, 1e3), 6e4);
 }
-
-export function getGenerationTimeoutMs(): number {
-  const raw = Number(readEnv('MODEL_TIMEOUT_MS'));
-  if (!Number.isFinite(raw) || raw <= 0) return 280000;
-  return Math.min(Math.max(raw, 5000), 295000);
-}
-
-export async function testModel(input: {
-  modelId?: unknown;
-  model?: unknown;
-  modelConfig?: unknown;
-}): Promise<ModelTestResult> {
-  const hasModelInput =
-    Boolean(input.modelId) ||
-    Boolean(input.model) ||
-    (input.modelConfig !== undefined && input.modelConfig !== null);
-
+async function testModel(input) {
+  const hasModelInput = Boolean(input.modelId) || Boolean(input.model) || input.modelConfig !== void 0 && input.modelConfig !== null;
   if (!hasModelInput) {
     return {
       ok: false,
       latencyMs: 0,
-      modelName: '',
-      source: 'none',
-      message: '缺少模型参数：请提供 modelId 或 modelConfig',
-      code: 'MISSING_MODEL',
+      modelName: "",
+      source: "none",
+      message: "\u7F3A\u5C11\u6A21\u578B\u53C2\u6570\uFF1A\u8BF7\u63D0\u4F9B modelId \u6216 modelConfig",
+      code: ERROR_CODES.MISSING_MODEL
     };
   }
-
-  let resolved: ResolvedModel | null;
+  let resolved;
   try {
     resolved = resolveRequestModel(input);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : '模型配置不合法';
-    const code =
-      error instanceof ModelConfigError ? error.code : 'MODEL_CONFIG_INVALID';
+    const message = error instanceof Error ? error.message : "\u6A21\u578B\u914D\u7F6E\u4E0D\u5408\u6CD5";
+    const code = error instanceof ModelConfigError ? error.code : ERROR_CODES.MODEL_CONFIG_INVALID;
     return {
       ok: false,
       latencyMs: 0,
-      modelName: '',
-      source: 'none',
+      modelName: "",
+      source: "none",
       message,
-      code,
+      code
     };
   }
-
   if (!resolved) {
     return {
       ok: false,
       latencyMs: 0,
-      modelName: '',
-      source: 'none',
-      message: '未配置可用模型，请检查环境变量或添加自定义模型',
-      code: 'NO_MODEL',
+      modelName: "",
+      source: "none",
+      message: "\u672A\u914D\u7F6E\u53EF\u7528\u6A21\u578B\uFF0C\u8BF7\u68C0\u67E5\u73AF\u5883\u53D8\u91CF\u6216\u6DFB\u52A0\u81EA\u5B9A\u4E49\u6A21\u578B",
+      code: ERROR_CODES.NO_MODEL
     };
   }
-
   try {
     const { text, latencyMs } = await callChatCompletion(
       resolved,
-      [{ role: 'user', content: '请只回复：OK' }],
+      [{ role: "user", content: "\u8BF7\u53EA\u56DE\u590D\uFF1AOK" }],
       {
         // 推理模型会先消耗 reasoning tokens，8 太小会导致 content 为空；
         // 256 足够覆盖推理开销，同时成本仍然很低。
         maxTokens: 256,
         temperature: 0,
-        timeoutMs: getTestTimeoutMs(),
+        timeoutMs: getTestTimeoutMs()
       }
     );
-
     return {
       ok: true,
       latencyMs,
       modelName: resolved.name,
       source: resolved.source,
-      reply: text.trim().slice(0, 100),
+      reply: text.trim().slice(0, 100)
     };
   } catch (error) {
     if (error instanceof ModelCallError) {
@@ -698,7 +518,7 @@ export async function testModel(input: {
         source: resolved.source,
         message: error.message,
         code: error.code,
-        status: error.status,
+        status: error.status
       };
     }
     return {
@@ -706,37 +526,39 @@ export async function testModel(input: {
       latencyMs: 0,
       modelName: resolved.name,
       source: resolved.source,
-      message: '模型测试失败',
-      code: 'UNKNOWN',
+      message: "\u6A21\u578B\u6D4B\u8BD5\u5931\u8D25",
+      code: ERROR_CODES.UNKNOWN
     };
   }
 }
-// ===== END inlined model core =====
 
-const app = new Hono();
-
-app.post('*', async (c) => {
-  let body: unknown;
+// server/src/routes/models.ts
+function modelCatalogHandler(c) {
+  return c.json({
+    success: true,
+    data: getModelCatalog()
+  });
+}
+async function modelTestHandler(c) {
+  let body;
   try {
     body = await c.req.json();
   } catch {
     return c.json(
-      { success: false, message: '请求参数格式错误' },
+      {
+        success: false,
+        code: "INVALID_JSON",
+        message: "\u8BF7\u6C42\u53C2\u6570\u683C\u5F0F\u9519\u8BEF"
+      },
       400
     );
   }
-
-  const record =
-    typeof body === 'object' && body !== null
-      ? (body as Record<string, unknown>)
-      : {};
-
+  const record = typeof body === "object" && body !== null ? body : {};
   const result = await testModel({
     modelId: record.modelId,
     model: record.model,
-    modelConfig: record.modelConfig,
+    modelConfig: record.modelConfig
   });
-
   if (result.ok) {
     return c.json({
       success: true,
@@ -745,22 +567,31 @@ app.post('*', async (c) => {
         latencyMs: result.latencyMs,
         modelName: result.modelName,
         source: result.source,
-        reply: result.reply,
-      },
+        reply: result.reply
+      }
     });
   }
-
   return c.json({
     success: false,
-    message: result.message || '模型测试失败',
+    code: result.code ?? "UNKNOWN",
+    message: result.message || "\u6A21\u578B\u6D4B\u8BD5\u5931\u8D25",
     data: {
       latencyMs: result.latencyMs,
       status: result.status,
       code: result.code,
       modelName: result.modelName,
-      source: result.source,
-    },
+      source: result.source
+    }
   });
-});
+}
+var modelsRoute = new Hono();
+modelsRoute.get("/", modelCatalogHandler);
+modelsRoute.post("/test", modelTestHandler);
 
-export const POST = (request: Request) => app.fetch(request);
+// api-src/models-test.ts
+var app = new Hono2();
+app.post("*", modelTestHandler);
+var POST = (request) => app.fetch(request);
+export {
+  POST
+};

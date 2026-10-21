@@ -1,6 +1,6 @@
 {
   "name": "aikids-frontend",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,15 +11,16 @@
     "test:unit": "node --import tsx --test tests/unit/*.test.mjs",
     "test:integration": "node --import tsx --test tests/integration/*.test.mjs",
     "test:contract": "node --import tsx --test tests/contract/*.test.mjs",
-    "check:inline": "node scripts/inline-api-model.mjs --check",
+    "build:api": "node scripts/build-api.mjs",
+    "check:inline": "node scripts/build-api.mjs --check",
     "check:docs": "node scripts/check-docs.mjs",
     "smoke:preview": "node scripts/smoke-preview.mjs",
+    "bench": "node --import tsx scripts/bench-generate.mjs",
     "ci": "npm run typecheck && npm run build && npm run build:server && npm test && npm run check:inline && npm run check:docs && npm run smoke:preview",
-    "build:server": "tsc -p server/tsconfig.json",
-    "inline": "node scripts/inline-api-model.mjs"
+    "build:server": "tsc -p server/tsconfig.json"
   },
   "dependencies": {
-    "hono": "^4.0.0",
+    "hono": "4.13.13",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.0"
@@ -29,6 +30,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.2.0",
+    "esbuild": "^0.21.5",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^5.0.0"

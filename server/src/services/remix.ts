@@ -11,66 +11,31 @@
  * 5. 模型不可用时返回原游戏，避免降级成无关 Mock
  *
  * 注意：
- * - api/generate.ts 内联了一份等价逻辑（Vercel 无法打包 api/ 下的
- *   跨文件相对导入），修改本文件时必须同步修改 api/generate.ts。
+ * - 本文件是 V3.5 唯一实现；api/ 由 scripts/build-api.mjs 打包生成，
+ *   不再维护手写副本。
  * - 本文件不读取环境变量以外的外部状态，便于单元测试。
  */
 
-export type RemixSourceMode = 'full' | 'outline' | 'preview' | 'none';
+import type {
+  GameProfile,
+  RemixAudit,
+  RemixFallbackResult,
+  RemixMode,
+  RemixPromptInput,
+  RemixPromptResult,
+  RemixSourceMode,
+} from '../types';
 
-/** 响应/作品中的 Remix 模式（fallback 表示已保留原游戏） */
-export type RemixMode = RemixSourceMode | 'fallback';
-
-export interface GameProfile {
-  title: string;
-  templateId: string;
-  templateName: string;
-  render: 'canvas' | 'dom' | 'unknown';
-  interactions: string[];
-  mechanics: string[];
-  hasScore: boolean;
-  hasWinLose: boolean;
-  hasTimer: boolean;
-  hasMobileViewport: boolean;
-  hasSoundCue: boolean;
-  lineCount: number;
-  charCount: number;
-}
-
-export interface RemixPromptInput {
-  templateId?: string;
-  originalTitle?: string;
-  originalUserPrompt?: string;
-  originalGameHtml?: string;
-  originalGameHtmlPreview?: string;
-  remixInstruction: string;
-}
-
-export interface RemixPromptResult {
-  systemPrompt: string;
-  userPrompt: string;
-  profile: GameProfile;
-  sourceMode: RemixSourceMode;
-  sourceChars: number;
-  includedChars: number;
-  maxTokens: number;
-}
-
-export interface RemixAudit {
-  sourceMode: Exclude<RemixSourceMode, 'none'>;
-  titlePreserved: boolean;
-  renderPreserved: boolean;
-  interactionsPreserved: boolean;
-  scorePreserved: boolean;
-  winLosePreserved: boolean;
-  preserved: boolean;
-  changed: boolean;
-}
-
-export interface RemixFallbackResult {
-  title: string;
-  html: string;
-}
+// 兼容 V3.4 的导入路径
+export type {
+  GameProfile,
+  RemixAudit,
+  RemixFallbackResult,
+  RemixMode,
+  RemixPromptInput,
+  RemixPromptResult,
+  RemixSourceMode,
+} from '../types';
 
 const TEMPLATE_LABELS: Record<string, string> = {
   free: '自由创作',

@@ -56,6 +56,7 @@ export function buildTestEnv(overrides = {}) {
  *   stubUrl?: string,
  *   gameModel?: string,
  *   noModel?: boolean,
+ *   real?: boolean,
  *   port?: number,
  *   readyTimeoutMs?: number,
  * }} [options]
@@ -65,17 +66,31 @@ export async function startBackend(options = {}) {
   const noModel = Boolean(options.noModel);
   const readyTimeoutMs = options.readyTimeoutMs ?? 20000;
 
-  const env = buildTestEnv({
-    PORT: String(port),
-    VOLCENGINE_API_KEY: noModel ? '' : 'test-key',
-    VOLCENGINE_BASE_URL: options.stubUrl || '',
-    DOUBAO_ENDPOINT_ID: noModel ? '' : 'ep-doubao-test',
-    DEEPSEEK_ENDPOINT_ID: noModel ? '' : 'ep-deepseek-test',
-    GAME_MODEL: noModel ? '' : options.gameModel || 'deepseek',
-    ALLOW_LOCAL_MODEL_HOSTS: '1',
-    MODEL_TEST_TIMEOUT_MS: '2000',
-    MODEL_TIMEOUT_MS: '15000',
-  });
+  // real：读取真实 .env（用于性能基线），不覆盖模型环境变量
+  const env = options.real
+    ? (() => {
+        const next = { ...process.env };
+        delete next.NODE_OPTIONS;
+        delete next.VERCEL;
+        return {
+          ...next,
+          NODE_ENV: 'bench',
+          PORT: String(port),
+          METRICS_ENABLED: '1',
+        };
+      })()
+    : buildTestEnv({
+        PORT: String(port),
+        VOLCENGINE_API_KEY: noModel ? '' : 'test-key',
+        VOLCENGINE_BASE_URL: options.stubUrl || '',
+        DOUBAO_ENDPOINT_ID: noModel ? '' : 'ep-doubao-test',
+        DEEPSEEK_ENDPOINT_ID: noModel ? '' : 'ep-deepseek-test',
+        GAME_MODEL: noModel ? '' : options.gameModel || 'deepseek',
+        ALLOW_LOCAL_MODEL_HOSTS: '1',
+        MODEL_TEST_TIMEOUT_MS: '2000',
+        MODEL_TIMEOUT_MS: '15000',
+        METRICS_ENABLED: '1',
+      });
 
   const child = spawn(process.execPath, [tsxCli, serverEntry], {
     cwd: path.join(root, 'server'),

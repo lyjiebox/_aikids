@@ -23,6 +23,7 @@ before(async () => {
   process.env.ALLOW_LOCAL_MODEL_HOSTS = '1';
   process.env.MODEL_TIMEOUT_MS = '15000';
   process.env.MODEL_TEST_TIMEOUT_MS = '2000';
+  process.env.METRICS_ENABLED = '0';
 
   stub = await createStubServer();
   ({ POST } = await import('../../api/generate.ts'));
@@ -88,7 +89,7 @@ test('CONTRACT-02 Remix full 关键字段与本地后端一致', async () => {
   assert.equal(data.remixAudit?.scorePreserved, true);
 });
 
-test('CONTRACT-03 空 prompt 返回 400', async () => {
+test('CONTRACT-03 空 prompt 返回 400 与稳定错误码', async () => {
   const res = await callProduction({
     templateId: 'animal',
     userPrompt: '',
@@ -96,6 +97,7 @@ test('CONTRACT-03 空 prompt 返回 400', async () => {
   });
   assert.equal(res.status, 400);
   assert.equal(res.json?.success, false);
+  assert.equal(res.json?.code, 'EMPTY_PROMPT');
 });
 
 test('CONTRACT-04 生产响应不回显 API Key', async () => {
@@ -106,4 +108,21 @@ test('CONTRACT-04 生产响应不回显 API Key', async () => {
   });
   assert.ok(!res.text.includes('test-key'));
   assert.ok(!res.text.includes('apiKey'));
+});
+
+test('CONTRACT-05 非法 JSON 返回 INVALID_JSON', async () => {
+  const res = await callProduction('{bad json');
+  assert.equal(res.status, 400);
+  assert.equal(res.json?.code, 'INVALID_JSON');
+});
+
+test('CONTRACT-06 模型输出为空时生产函数降级本地模板', async () => {
+  const res = await callProduction({
+    templateId: 'animal',
+    userPrompt: '做一个动物游戏',
+    modelConfig: customModel(stub.chatUrl, 'stub-empty'),
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.json?.data?.engine, 'mock');
+  assert.match(res.json?.data?.warning || '', /降级为本地模板/);
 });

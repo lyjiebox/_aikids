@@ -48,10 +48,10 @@ npm run dev
 npm run ci
 ```
 
-等价于 CI 的 typecheck → build → 核心回归 → 内联检查 → 文档检查 → 构建产物冒烟。全部通过后再提交并打 tag：
+等价于 CI 的 typecheck → build → 核心回归 → API 生成物检查 → 文档检查 → 构建产物冒烟。改动 `server/src/**` 或 `api-src/**` 后必须先运行 `npm run build:api` 并提交生成物（Vercel 不执行自定义 build，`api/` 必须与源码一起推送）。全部通过后再提交并打 tag：
 
 ```bash
-git tag -a v3.4.0 -m "V3.4 工程收敛"
+git tag -a v3.5.0 -m "V3.5 API 拆分、类型与性能基线"
 git push origin main --tags
 ```
 

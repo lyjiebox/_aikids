@@ -1,0 +1,874 @@
+{
+  "version": "3.5.0",
+  "mode": "stub",
+  "target": "stub:http://127.0.0.1:53496/v1/chat/completions",
+  "generatedAt": "2026-10-21T02:54:18.585Z",
+  "sample": {
+    "models": [
+      "doubao",
+      "deepseek"
+    ],
+    "prompts": 4,
+    "runs": 3,
+    "totalRequests": 24
+  },
+  "pricing": {
+    "inputPer1k": null,
+    "outputPer1k": null
+  },
+  "stats": {
+    "overall": {
+      "requests": 24,
+      "p50Ms": 3.62,
+      "p90Ms": 5.81,
+      "avgMs": 4.34,
+      "successRate": 1,
+      "fallbackRate": 0,
+      "avgPromptTokens": 100,
+      "avgCompletionTokens": 200,
+      "tokensEstimated": false,
+      "totalCost": null,
+      "avgCost": null
+    },
+    "byModel": {
+      "doubao": {
+        "requests": 12,
+        "p50Ms": 4.53,
+        "p90Ms": 6.9,
+        "avgMs": 5.27,
+        "successRate": 1,
+        "fallbackRate": 0,
+        "avgPromptTokens": 100,
+        "avgCompletionTokens": 200,
+        "tokensEstimated": false,
+        "totalCost": null,
+        "avgCost": null
+      },
+      "deepseek": {
+        "requests": 12,
+        "p50Ms": 3.48,
+        "p90Ms": 3.62,
+        "avgMs": 3.41,
+        "successRate": 1,
+        "fallbackRate": 0,
+        "avgPromptTokens": 100,
+        "avgCompletionTokens": 200,
+        "tokensEstimated": false,
+        "totalCost": null,
+        "avgCost": null
+      }
+    },
+    "byScenario": {
+      "B1-收集": {
+        "requests": 6,
+        "p50Ms": 3.52,
+        "p90Ms": 12.61,
+        "avgMs": 5.27,
+        "successRate": 1,
+        "fallbackRate": 0,
+        "avgPromptTokens": 100,
+        "avgCompletionTokens": 200,
+        "tokensEstimated": false,
+        "totalCost": null,
+        "avgCost": null
+      },
+      "B2-打地鼠": {
+        "requests": 6,
+        "p50Ms": 3.6,
+        "p90Ms": 5.81,
+        "avgMs": 3.81,
+        "successRate": 1,
+        "fallbackRate": 0,
+        "avgPromptTokens": 100,
+        "avgCompletionTokens": 200,
+        "tokensEstimated": false,
+        "totalCost": null,
+        "avgCost": null
+      },
+      "B3-跑酷": {
+        "requests": 6,
+        "p50Ms": 3.49,
+        "p90Ms": 4.93,
+        "avgMs": 3.88,
+        "successRate": 1,
+        "fallbackRate": 0,
+        "avgPromptTokens": 100,
+        "avgCompletionTokens": 200,
+        "tokensEstimated": false,
+        "totalCost": null,
+        "avgCost": null
+      },
+      "B4-Remix": {
+        "requests": 6,
+        "p50Ms": 3.63,
+        "p90Ms": 6.9,
+        "avgMs": 4.39,
+        "successRate": 1,
+        "fallbackRate": 0,
+        "avgPromptTokens": 100,
+        "avgCompletionTokens": 200,
+        "tokensEstimated": false,
+        "totalCost": null,
+        "avgCost": null
+      }
+    }
+  },
+  "results": [
+    {
+      "scenario": "B1-收集",
+      "model": "doubao",
+      "run": 1,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 12.61,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 31,
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.769Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 9,
+        "upstreamMs": 8,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B2-打地鼠",
+      "model": "doubao",
+      "run": 1,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 5.81,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 42,
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.774Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 3,
+        "upstreamMs": 3,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B3-跑酷",
+      "model": "doubao",
+      "run": 1,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 4.93,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 41,
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.780Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 3,
+        "upstreamMs": 3,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B4-Remix",
+      "model": "doubao",
+      "run": 1,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 1071,
+      "latencyMs": 6.9,
+      "metric": {
+        "event": "generate",
+        "mode": "remix",
+        "promptChars": 1515,
+        "includedChars": 954,
+        "sourceMode": "full",
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.787Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 5,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B1-收集",
+      "model": "doubao",
+      "run": 2,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 4.53,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 31,
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.791Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B2-打地鼠",
+      "model": "doubao",
+      "run": 2,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 4.18,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 42,
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.795Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 1,
+        "upstreamMs": 1,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B3-跑酷",
+      "model": "doubao",
+      "run": 2,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 4.58,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 41,
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.800Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B4-Remix",
+      "model": "doubao",
+      "run": 2,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 1071,
+      "latencyMs": 4.71,
+      "metric": {
+        "event": "generate",
+        "mode": "remix",
+        "promptChars": 1515,
+        "includedChars": 954,
+        "sourceMode": "full",
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.805Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 3,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B1-收集",
+      "model": "doubao",
+      "run": 3,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 4.14,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 31,
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.809Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B2-打地鼠",
+      "model": "doubao",
+      "run": 3,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 3.71,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 42,
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.813Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B3-跑酷",
+      "model": "doubao",
+      "run": 3,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 3.49,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 41,
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.817Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B4-Remix",
+      "model": "doubao",
+      "run": 3,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "Doubao Seed 2.0 Pro",
+      "warning": null,
+      "gameHtmlLength": 1071,
+      "latencyMs": 3.63,
+      "metric": {
+        "event": "generate",
+        "mode": "remix",
+        "promptChars": 1515,
+        "includedChars": 954,
+        "sourceMode": "full",
+        "engine": "volcengine",
+        "modelId": "doubao",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.820Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 1,
+        "upstreamMs": 1,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B1-收集",
+      "model": "deepseek",
+      "run": 1,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 3.52,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 31,
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.824Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B2-打地鼠",
+      "model": "deepseek",
+      "run": 1,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 2.23,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 42,
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.826Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 1,
+        "upstreamMs": 1,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B3-跑酷",
+      "model": "deepseek",
+      "run": 1,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 3.29,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 41,
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.830Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 1,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B4-Remix",
+      "model": "deepseek",
+      "run": 1,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 1071,
+      "latencyMs": 3.48,
+      "metric": {
+        "event": "generate",
+        "mode": "remix",
+        "promptChars": 1515,
+        "includedChars": 954,
+        "sourceMode": "full",
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.833Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B1-收集",
+      "model": "deepseek",
+      "run": 2,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 3.33,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 31,
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.836Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 1,
+        "upstreamMs": 1,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B2-打地鼠",
+      "model": "deepseek",
+      "run": 2,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 3.6,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 42,
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.840Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B3-跑酷",
+      "model": "deepseek",
+      "run": 2,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 3.41,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 41,
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.843Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 1,
+        "upstreamMs": 1,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B4-Remix",
+      "model": "deepseek",
+      "run": 2,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 1071,
+      "latencyMs": 4,
+      "metric": {
+        "event": "generate",
+        "mode": "remix",
+        "promptChars": 1515,
+        "includedChars": 954,
+        "sourceMode": "full",
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.847Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 1,
+        "upstreamMs": 1,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B1-收集",
+      "model": "deepseek",
+      "run": 3,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 3.5,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 31,
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.851Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B2-打地鼠",
+      "model": "deepseek",
+      "run": 3,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 3.35,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 42,
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.854Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 1,
+        "upstreamMs": 1,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B3-跑酷",
+      "model": "deepseek",
+      "run": 3,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 916,
+      "latencyMs": 3.57,
+      "metric": {
+        "event": "generate",
+        "mode": "create",
+        "promptChars": 41,
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.858Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    },
+    {
+      "scenario": "B4-Remix",
+      "model": "deepseek",
+      "run": 3,
+      "status": 200,
+      "success": true,
+      "engine": "volcengine",
+      "modelName": "DeepSeek V4 Pro",
+      "warning": null,
+      "gameHtmlLength": 1071,
+      "latencyMs": 3.62,
+      "metric": {
+        "event": "generate",
+        "mode": "remix",
+        "promptChars": 1515,
+        "includedChars": 954,
+        "sourceMode": "full",
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelSource": "env",
+        "timestamp": "2026-10-21T02:54:18.862Z",
+        "ok": true,
+        "status": 200,
+        "totalMs": 2,
+        "upstreamMs": 2,
+        "usage": {
+          "promptTokens": 100,
+          "completionTokens": 200,
+          "totalTokens": 300
+        }
+      },
+      "error": null
+    }
+  ]
+}

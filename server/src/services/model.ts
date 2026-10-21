@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * 模型注册与调用（本地开发后端）
+ * 模型注册与调用（V3.5 唯一实现）
  * ============================================================
  *
  * 职责：
@@ -10,93 +10,42 @@
  * 4. 统一调用 OpenAI 兼容的 Chat Completions 接口
  * 5. 提供模型测试（只验证调用与返回，不生成游戏）
  *
- * 注意：api/_model.ts 与本文件保持对等，修改时需同步两端。
+ * V3.5 起本文件是唯一实现：`api/` 由 scripts/build-api.mjs
+ * 从本文件与 api-src/ 一起打包生成，不再手工同步副本。
  * 所有环境变量都在函数内部读取，确保 server/src/loadEnv.ts
  * 先加载 .env 后再取值。
  */
 
-export type ModelSource = 'env' | 'custom';
+import {
+  ModelCallError,
+  ModelConfigError,
+} from '../errors';
+import {
+  ERROR_CODES,
+  type CallOptions,
+  type ChatMessage,
+  type CustomModelPayload,
+  type EnvModelInfo,
+  type ModelCatalog,
+  type ModelSource,
+  type ModelTestResult,
+  type ResolvedModel,
+  type TokenUsage,
+} from '../types';
 
-export interface EnvModelInfo {
-  id: string;
-  name: string;
-  source: 'env';
-  available: boolean;
-  unavailableReason?: string;
-  baseUrl: string;
-  modelPreview: string;
-  hasApiKey: boolean;
-  isDefault: boolean;
-}
-
-export interface CustomModelPayload {
-  id?: string;
-  name: string;
-  baseUrl: string;
-  model: string;
-  apiKey?: string;
-}
-
-export interface ResolvedModel {
-  id: string;
-  name: string;
-  source: ModelSource;
-  baseUrl: string;
-  model: string;
-  apiKey: string;
-}
-
-export interface ModelCatalog {
-  models: EnvModelInfo[];
-  defaultModelId: string | null;
-  defaultModelName: string | null;
-  hasServerApiKey: boolean;
-}
-
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-export interface ModelTestResult {
-  ok: boolean;
-  latencyMs: number;
-  modelName: string;
-  source: ModelSource | 'none';
-  reply?: string;
-  message?: string;
-  code?: string;
-  status?: number;
-}
-
-/** 请求中的模型配置不合法（参数问题，应返回 400） */
-export class ModelConfigError extends Error {
-  readonly code: string;
-
-  constructor(message: string, code = 'MODEL_CONFIG_INVALID') {
-    super(message);
-    this.name = 'ModelConfigError';
-    this.code = code;
-  }
-}
-
-/** 调用模型失败（上游/网络/超时，可降级 Mock） */
-export class ModelCallError extends Error {
-  readonly code: string;
-  readonly status?: number;
-  readonly latencyMs: number;
-
-  constructor(
-    message: string,
-    options: { code?: string; status?: number; latencyMs?: number } = {}
-  ) {
-    super(message);
-    this.name = 'ModelCallError';
-    this.code = options.code || 'MODEL_CALL_FAILED';
-    this.status = options.status;
-    this.latencyMs = options.latencyMs ?? 0;
-  }
-}
+// 兼容 V3.4 的导入路径（server/src/types 已迁移到共享类型）
+export type {
+  CallOptions,
+  ChatMessage,
+  CustomModelPayload,
+  EnvModelInfo,
+  ModelCatalog,
+  ModelSource,
+  ModelTestResult,
+  ResolvedModel,
+  TokenUsage,
+} from '../types';
+export { ModelCallError, ModelConfigError } from '../errors';
 
 // ============================================================
 // 常量
@@ -229,6 +178,40 @@ function isAbortError(error: unknown): boolean {
     'name' in error &&
     (error as { name?: unknown }).name === 'AbortError'
   );
+}
+
+function readTokenCount(
+  record: Record<string, unknown>,
+  key: string
+): number | undefined {
+  const value = record[key];
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+    return undefined;
+  }
+  return Math.floor(value);
+}
+
+/** 从 Chat Completions 响应中提取 usage；缺失/非法时返回 undefined */
+export function parseTokenUsage(payload: unknown): TokenUsage | undefined {
+  const record = asRecord(payload);
+  const usage = asRecord(record?.usage);
+  if (!usage) return undefined;
+
+  const promptTokens = readTokenCount(usage, 'prompt_tokens');
+  const completionTokens = readTokenCount(usage, 'completion_tokens');
+  if (promptTokens === undefined && completionTokens === undefined) {
+    return undefined;
+  }
+
+  const totalTokens =
+    readTokenCount(usage, 'total_tokens') ??
+    (promptTokens ?? 0) + (completionTokens ?? 0);
+
+  return {
+    promptTokens: promptTokens ?? 0,
+    completionTokens: completionTokens ?? 0,
+    totalTokens,
+  };
 }
 
 // ============================================================
@@ -433,14 +416,17 @@ export function resolveRequestModel(input: {
   if (id) {
     const envModel = buildEnvModels().find((model) => model.info.id === id);
     if (!envModel) {
-      throw new ModelConfigError(`未知模型：${rawId.trim()}`, 'MODEL_NOT_FOUND');
+      throw new ModelConfigError(
+        `未知模型：${rawId.trim()}`,
+        ERROR_CODES.MODEL_NOT_FOUND
+      );
     }
     if (!envModel.info.available) {
       throw new ModelConfigError(
         `模型「${envModel.info.name}」未配置：${
           envModel.info.unavailableReason || '缺少环境变量'
         }`,
-        'MODEL_UNAVAILABLE'
+        ERROR_CODES.MODEL_UNAVAILABLE
       );
     }
     return toResolvedModel(envModel);
@@ -453,17 +439,11 @@ export function resolveRequestModel(input: {
 // Chat Completions 调用
 // ============================================================
 
-export interface CallOptions {
-  maxTokens: number;
-  temperature: number;
-  timeoutMs: number;
-}
-
 export async function callChatCompletion(
   model: ResolvedModel,
   messages: ChatMessage[],
   options: CallOptions
-): Promise<{ text: string; latencyMs: number }> {
+): Promise<{ text: string; latencyMs: number; usage?: TokenUsage }> {
   const started = Date.now();
   const timeoutMs = Math.max(1000, options.timeoutMs);
   const controller = new AbortController();
@@ -492,12 +472,12 @@ export async function callChatCompletion(
       if (isAbortError(error)) {
         throw new ModelCallError(
           `请求超时（${Math.round(timeoutMs / 1000)} 秒）`,
-          { code: 'TIMEOUT', latencyMs }
+          { code: ERROR_CODES.TIMEOUT, latencyMs }
         );
       }
       throw new ModelCallError(
         '无法连接模型接口（请检查地址或重定向设置）',
-        { code: 'NETWORK', latencyMs }
+        { code: ERROR_CODES.NETWORK, latencyMs }
       );
     }
 
@@ -512,28 +492,28 @@ export async function callChatCompletion(
       }
       if (response.status === 401 || response.status === 403) {
         throw new ModelCallError('鉴权失败，请检查 API Key', {
-          code: 'AUTH',
+          code: ERROR_CODES.AUTH,
           status: response.status,
           latencyMs,
         });
       }
       if (response.status === 404) {
         throw new ModelCallError('接口地址或模型 ID 不存在', {
-          code: 'NOT_FOUND',
+          code: ERROR_CODES.NOT_FOUND,
           status: response.status,
           latencyMs,
         });
       }
       if (response.status === 429) {
         throw new ModelCallError('请求过于频繁或额度不足', {
-          code: 'RATE_LIMIT',
+          code: ERROR_CODES.RATE_LIMIT,
           status: response.status,
           latencyMs,
         });
       }
       if (response.status >= 500) {
         throw new ModelCallError('模型服务暂时不可用', {
-          code: 'UPSTREAM_5XX',
+          code: ERROR_CODES.UPSTREAM_5XX,
           status: response.status,
           latencyMs,
         });
@@ -542,7 +522,11 @@ export async function callChatCompletion(
         `模型接口返回错误（HTTP ${response.status}）${
           detail ? `：${detail}` : ''
         }`,
-        { code: 'UPSTREAM_ERROR', status: response.status, latencyMs }
+        {
+          code: ERROR_CODES.UPSTREAM_ERROR,
+          status: response.status,
+          latencyMs,
+        }
       );
     }
 
@@ -551,7 +535,7 @@ export async function callChatCompletion(
       data = await response.json();
     } catch {
       throw new ModelCallError('模型返回内容不是合法 JSON', {
-        code: 'BAD_RESPONSE',
+        code: ERROR_CODES.BAD_RESPONSE,
         status: response.status,
         latencyMs,
       });
@@ -572,13 +556,17 @@ export async function callChatCompletion(
           ? '模型未返回最终文本（可能被 max_tokens 截断）'
           : '模型未返回内容';
       throw new ModelCallError(messageText, {
-        code: 'EMPTY_RESPONSE',
+        code: ERROR_CODES.EMPTY_RESPONSE,
         status: response.status,
         latencyMs,
       });
     }
 
-    return { text: content, latencyMs };
+    return {
+      text: content,
+      latencyMs,
+      usage: parseTokenUsage(data),
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -617,7 +605,7 @@ export async function testModel(input: {
       modelName: '',
       source: 'none',
       message: '缺少模型参数：请提供 modelId 或 modelConfig',
-      code: 'MISSING_MODEL',
+      code: ERROR_CODES.MISSING_MODEL,
     };
   }
 
@@ -628,7 +616,9 @@ export async function testModel(input: {
     const message =
       error instanceof Error ? error.message : '模型配置不合法';
     const code =
-      error instanceof ModelConfigError ? error.code : 'MODEL_CONFIG_INVALID';
+      error instanceof ModelConfigError
+        ? error.code
+        : ERROR_CODES.MODEL_CONFIG_INVALID;
     return {
       ok: false,
       latencyMs: 0,
@@ -646,7 +636,7 @@ export async function testModel(input: {
       modelName: '',
       source: 'none',
       message: '未配置可用模型，请检查环境变量或添加自定义模型',
-      code: 'NO_MODEL',
+      code: ERROR_CODES.NO_MODEL,
     };
   }
 
@@ -688,7 +678,7 @@ export async function testModel(input: {
       modelName: resolved.name,
       source: resolved.source,
       message: '模型测试失败',
-      code: 'UNKNOWN',
+      code: ERROR_CODES.UNKNOWN,
     };
   }
 }

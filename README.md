@@ -2,7 +2,7 @@
 
 让孩子通过语音或文字描述，AI 生成可玩的小游戏！
 
-当前版本：**3.4.0（工程收敛）**。本版本不改变用户可见功能，重点是 CI、可重复测试、文档一致性与发布流程。
+当前版本：**3.5.0（API 拆分、类型与性能基线）**。本版本不改变用户可见功能，重点是生成链路分层、`api/` 与 `server/` 单实现、统一类型/错误码，以及 p50/p90 与 token 成本基线。
 
 ## 🚀 快速开始
 
@@ -36,11 +36,13 @@ npm run dev
 ## 🧪 测试与 CI
 
 ```bash
-npm run typecheck      # api + src + server 类型检查
-npm test               # 单元 + 集成 + 生产函数契约
-npm run check:inline   # api/_model.ts 与三个自包含函数是否同步
+npm run typecheck      # api-src + src + server 类型检查
+npm test               # 单元 + 集成 + 契约（含双端一致性）
+npm run build:api      # 由 api-src + server 生成 api/*.ts（自包含）
+npm run check:inline   # 生成物是否与源码同步（CI 用）
 npm run check:docs     # 版本号 / CHANGELOG / design / uat / README 一致性
 npm run smoke:preview  # 构建产物首页与 SPA 路由冒烟
+npm run bench          # 性能/成本基线（默认本地桩；--real 调真实模型）
 npm run ci             # 本地等价 CI 全链路
 ```
 
@@ -48,7 +50,8 @@ npm run ci             # 本地等价 CI 全链路
 
 - `tests/support/stub-model-server.mjs` 提供进程内 OpenAI 兼容测试桩；
 - 集成测试用动态端口启动 `server/`，结束后自动回收；
-- 生产函数契约测试直接调用 `api/generate.ts`，防止双实现漂移。
+- 双端一致性契约测试把同一请求分别打 `server/` 与 `api/`，锁定状态码、错误码与关键字段；
+- 性能基线默认使用测试桩；`npm run bench -- --real` 读取 `.env`，会消耗真实额度。
 
 GitHub Actions 在 push / pull request 时自动执行同一套检查，配置见 `.github/workflows/ci.yml`。
 
@@ -63,15 +66,16 @@ _aikids/
 │   ├── components/           # 模板、语音、Remix、家长验证等
 │   ├── context/              # 全局状态与 localStorage 水合
 │   └── services/             # API、存储、模型工具、Remix 分析
-├── api/                      # Vercel Serverless Functions（生产）
-│   ├── _model.ts             # 模型核心内联源
-│   ├── generate.ts           # 自包含生成函数（由脚本内联）
+├── api/                      # Vercel 生成物（AUTO-GENERATED，禁止手改）
+│   ├── generate.ts           # ← api-src/generate.ts + server/**
 │   └── models/{index,test}.ts
-├── server/                   # Hono 本地开发服务
-│   ├── src/routes/           # generate / models
-│   └── src/services/         # ai / model / remix
+├── api-src/                  # Vercel 入口源码（薄适配，构建时打包）
+├── server/                   # 唯一业务实现 + 本地 Hono 服务
+│   ├── src/types/            # 契约类型与错误码（唯一来源）
+│   ├── src/routes/           # generate / models（薄 HTTP 适配）
+│   └── src/services/         # prompt / parse / mock / model / remix / metrics / generate
 ├── tests/                    # 单元 / 集成 / 契约测试
-├── scripts/                  # 测试运行、内联同步、文档检查、冒烟
+├── scripts/                  # API 生成、测试运行、基线、文档检查、冒烟
 ├── temp/                     # 历史 UAT 报告与截图（测试脚本已迁入 tests/）
 ├── CHANGELOG.md
 ├── tsconfig.json
@@ -89,6 +93,7 @@ _aikids/
 - 🧪 模型测试只验证调用与返回，不生成游戏
 - 🔄 Remix 上下文增强（V3.3）：改编时透传原游戏完整源码与结构档案，模型在原游戏基础上做最小修改；AI 不可用时保留原游戏
 - 🧰 工程保障（V3.4）：类型检查、CI、生成/Remix/存储三条核心路径回归、发布流程
+- 🧱 架构收敛（V3.5）：生成链路分层、`api/` 由源码生成、统一类型/错误码、双端一致性契约、性能/成本基线
 
 ## 📝 说明
 
@@ -97,7 +102,7 @@ _aikids/
 - 未选择模型时按环境变量 `GAME_MODEL` 生成；AI 不可用时普通创作降级到本地模板，Remix 保留原游戏
 - 生产环境部署在 Vercel（`api/` 作为 Serverless Functions），部署说明见 `DEPLOY.md`
 - 独立域名：boxaikids.top
-- 版本变更见 `CHANGELOG.md`；V3.4 设计与验收见 `docs/design-v3.4.md`、`docs/uat-v3.4.md`
+- 版本变更见 `CHANGELOG.md`；V3.5 设计与验收见 `docs/design-v3.5.md`、`docs/uat-v3.5.md`
 
 ---
 

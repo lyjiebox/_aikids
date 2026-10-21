@@ -1,6 +1,6 @@
 {
   "name": "aikids-server",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.0.4",
-    "hono": "^4.0.0"
+    "hono": "4.13.13"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

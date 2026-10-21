@@ -72,6 +72,7 @@ test('GEN-03 空 prompt 返回 400', async () => {
   });
   assert.equal(res.status, 400);
   assert.equal(res.json?.success, false);
+  assert.equal(res.json?.code, 'EMPTY_PROMPT');
   assert.match(res.json?.message || '', /创意/);
 });
 
@@ -79,6 +80,7 @@ test('GEN-04 非法 JSON 返回 400 而不是 500', async () => {
   const res = await postJson(backend.baseUrl, '/api/generate', '{not json');
   assert.equal(res.status, 400);
   assert.equal(res.json?.success, false);
+  assert.equal(res.json?.code, 'INVALID_JSON');
 });
 
 test('GEN-05 自定义模型非法地址被白名单拦截', async () => {
@@ -95,6 +97,7 @@ test('GEN-05 自定义模型非法地址被白名单拦截', async () => {
   });
   assert.equal(res.status, 400);
   assert.equal(res.json?.success, false);
+  assert.equal(res.json?.code, 'MODEL_CONFIG_INVALID');
   assert.match(res.json?.message || '', /白名单/);
 });
 
@@ -123,4 +126,17 @@ test('GEN-07 模型目录接口正常且不回显 API Key', async () => {
   assert.equal(data.data.hasServerApiKey, true);
   assert.ok(!text.includes('test-key'), '响应不应回显 API Key');
   assert.ok(!text.includes('apiKey'), '响应不应包含 apiKey 字段');
+});
+
+test('GEN-08 模型输出为空时普通生成降级本地模板', async () => {
+  const res = await postJson(backend.baseUrl, '/api/generate', {
+    templateId: 'animal',
+    userPrompt: '做一个动物游戏',
+    modelConfig: customModel(stub.chatUrl, 'stub-empty'),
+  });
+  assert.equal(res.status, 200);
+  assert.equal(res.json?.success, true);
+  assert.equal(res.json?.data?.engine, 'mock');
+  assert.match(res.json?.data?.warning || '', /未返回内容/);
+  assert.match(res.json?.data?.warning || '', /降级为本地模板/);
 });

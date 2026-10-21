@@ -2,6 +2,55 @@
 
 本项目遵循「一个版本一个 tag」的发布方式。版本号与 `package.json`、`server/package.json` 保持一致。
 
+## [3.5.0] - 2026-10-21
+
+API 拆分、类型与性能基线版本：不改变用户可见需求，把生成链路拆成可维护的分层，消除 `api/` 与 `server/` 双实现，并建立可复跑的耗时/成功率/token 基线。
+
+### Added
+
+- 新增生成链路分层：
+  - `server/src/services/prompt.ts`：System Prompt、模板提示、输出上限常量。
+  - `server/src/services/parse.ts`：五种模型输出格式解析 + `GameParseError`。
+  - `server/src/services/mock.ts`：本地兜底游戏（唯一实现）。
+  - `server/src/services/generate.ts`：请求校验、Remix 准备、模型调用、解析、降级、指标编排。
+  - `server/src/services/metrics.ts`：`[metrics]` 事件、token 估算、nearest-rank 分位数、成本换算。
+  - `server/src/errors.ts`：`ModelConfigError` / `ModelCallError` / `GameParseError`。
+- 新增 `api-src/{generate,models-index,models-test}.ts` 作为 Vercel 入口源码；`api/` 改由 `scripts/build-api.mjs`（esbuild）生成。
+- 新增 `scripts/bench-generate.mjs` 与 `npm run bench`：固定 Prompt 集，输出 p50/p90、成功率、降级率、token 与可选成本；支持 `--real` 调真实模型。
+- 新增 `tests/contract/parity.test.mjs`：同一请求分别打 `server/` 与 `api/`，比较状态码、错误码、字段与关键内容。
+- 新增 `tests/unit/generate-service.test.mjs`、`tests/unit/metrics.test.mjs`。
+- 错误响应新增稳定 `code` 字段（如 `EMPTY_PROMPT`、`INVALID_JSON`、`MODEL_NOT_FOUND`）。
+- `callChatCompletion` 提取上游 `usage`，指标记录真实 token；缺失时使用估算并标注。
+
+### Changed
+
+- `server/src/types/index.ts` 成为契约类型与错误码的唯一来源；`services/model.ts`、`services/remix.ts` 改为导入并在原路径 re-export，消除类型漂移。
+- `server/src/routes/{generate,models}.ts` 改为薄 HTTP 适配层；业务逻辑统一在 services。
+- `server/src/services/ai.ts` 改为兼容导出层，保留 V3.4 的导入路径。
+- Remix 判定统一为 `remixFrom + 非空 remixInstruction`；只有 `remixFrom` 时按普通生成处理。
+- 模型输出无法解析时统一抛 `OUTPUT_PARSE_FAILED` 并降级（普通生成 → 本地模板，Remix → 保留原游戏），不再出现 `api/` 500 与 `server/` 默认游戏的行为差异。
+- 根 `package.json` / `server/package.json` 版本号更新为 `3.5.0`；Hono 统一到 `^4.13.13`；新增 `esbuild` devDependency。
+- CI 步骤名称改为「Check generated API functions」；`check:inline` 的语义变为「生成物与源码逐字节一致」。
+- `README.md`、`DEPLOY.md`、`.env.example`、`docs/proposal.md` 更新版本、分层结构、生成流程与基线命令。
+
+### Removed
+
+- 删除 `api/_model.ts`（模型实现已在 `server/src/services/model.ts`）。
+- 删除 `scripts/inline-api-model.mjs`（由 `scripts/build-api.mjs` 取代）。
+
+### Verified
+
+- `npm run typecheck`：通过。
+- `npm run build` / `npm run build:server`：通过。
+- `npm test`：单元 + 集成 + 生产函数契约 + 双端一致性全部通过。
+- `npm run check:inline`：三个 `api/` 生成物与源码一致。
+- `npm run check:docs`：版本、CHANGELOG、design/uat、生成物 banner、测试资产一致。
+- `npm run smoke:preview`：构建产物首页/SPA 路由正常。
+- 性能基线：
+  - 桩模式：24 次，成功率 100%，p50 3.62ms / p90 5.81ms（`temp/v3.5/baseline-stub-2026-10-21.md`）。
+  - 真实模型：8 次，7 次真实生成成功（87.5%），p50 67.5s / p90 180.2s；doubao 一次上游连接失败已降级并记录（`temp/v3.5/baseline-real-2026-10-21.md`）。
+  - 成本：未配置单价，基线只记录 token（成功样本优先使用上游 usage）。
+
 ## [3.4.0] - 2026-10-20
 
 工程收敛版本：不改变任何用户可见需求，把项目变成可类型检查、可回归、可发布的工程。
