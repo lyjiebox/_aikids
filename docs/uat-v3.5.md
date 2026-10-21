@@ -383,10 +383,10 @@ Vercel 部署需与推送 commit 对应；无法确认时记录 Vercel Dashboard
 | UAT-3.5-14 | `npm run bench -- --real --models doubao,deepseek --runs 1` | ⚠️ 部分通过 | 8 次，7 次真实成功（87.5%）；doubao B2 上游连接失败，已降级并记录 |
 | UAT-3.5-15 | `npm run ci` | ✅ 通过 | 退出码 0，日志 `temp/v3.5/ci-run-1.log` |
 | UAT-3.5-16 | `npm run check:docs` | ✅ 通过 | version=3.5.0，tests=9 |
-| UAT-3.5-17 | GitHub Actions | ⏳ 待推送 | 首次 run `39611179318` 因 Node 20 测试断言失败；已修复并补充 Node 20 本地验证，待新提交后确认 |
-| UAT-3.5-18 | 生产 curl / web_fetch | ⏳ 待部署 | 推送 Vercel 后执行 |
+| UAT-3.5-17 | GitHub Actions | ✅ 通过 | run `39612404376`（commit `bf22c3c`）success；首次 run `39611179318` 的 Node 20 断言问题已修复 |
+| UAT-3.5-18 | 生产 curl / web_fetch | ✅ 通过 | 首页 200、`/api/models` 200、生成 200（volcengine，74.1s）、Remix 200（full，审计通过）、400 错误码正确 |
 | UAT-3.5-19 | Chrome Headless | ✅ 通过 | `/`、`/create`、`/gallery`、`/settings`、`/settings/models`、`/play/demo` 均渲染 |
-| UAT-3.5-20 | CHANGELOG / tag | 🚧 本地完成 | 本地已创建 `v3.5.0` annotated tag；推送后确认 |
+| UAT-3.5-20 | CHANGELOG / tag | 🚧 部分完成 | CHANGELOG 3.5.0 已提交；本地 annotated tag `v3.5.0` 指向 `bf22c3c`；远端 tag 未推送 |
 
 ### 13.1 通过标准
 

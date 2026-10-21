@@ -19,7 +19,7 @@
 | 桩模式基线 | ✅ 24 次，成功率 100%，p50 3.62ms / p90 5.81ms |
 | 真实模型基线 | ⚠️ 8 次，成功 7 次（87.5%），doubao B2 出现一次上游连接失败；p50 67.5s / p90 180.2s |
 | UI 抽查 | ✅ 首页 / 创作 / 画廊 / 设置 / 模型 / 播放均渲染 |
-| 生产冒烟 | ⏳ 推送后执行（见第 7 节） |
+| 生产冒烟 | ✅ 首页 200、`/api/models` 200、生产生成 200（volcengine）、生产 Remix 200（full + 审计通过） |
 
 > 补充（2026-10-21 晚间）：首次远端 CI（run `39611179318`）在 Node 20 下 `PARSE-03` 失败，原因是测试用 `.ts` 后缀导入 `GameParseError`，与 service 的省略扩展名导入形成两个模块实例，`instanceof` 不成立；Node 24 未暴露。已改为断言 `error.name + code`，并用本地 Node 20.20.2 复跑 63/63 通过。修复提交待推送。
 
@@ -155,15 +155,33 @@ npm run bench -- --real --models doubao,deepseek --runs 1 \
 
 ---
 
-## 7. 生产冒烟（待推送后执行）
+## 7. 生产冒烟
 
-```bash
-PROD_URL=https://boxaikids.top
-curl -sS -o /dev/null -w '%{http_code}\n' "$PROD_URL/"
-curl -sS "$PROD_URL/api/models" | head -c 500
-```
+> 执行时间：2026-10-21 21:58–22:02（Asia/Shanghai）
+> 生产入口：`https://boxaikids.top` → 308 跳转 `https://www.boxaikids.top`（Vercel）
+> 代码提交：`bf22c3c`（GitHub Actions run `39612404376` success）
 
-待记录：首页状态码、`/api/models` 响应、生成/Remix（有 Key 时）、Vercel 部署 commit、远端 CI 结果。
+| 检查 | 命令 | 结果 |
+|------|------|------|
+| 首页 | `curl -sSL -o prod-home.html -w '%{http_code}' https://boxaikids.top/` | ✅ 308 → www 200，`<title>AI 魔法游戏</title>` |
+| 静态资源 | 首页 `src="/assets/index-BrX-Qvh9.js"` | ✅ 与本地构建 hash 一致，`boxaikids.top/assets/...` 返回 200 |
+| 模型目录 | `GET /api/models` | ✅ 200，`success=true`，doubao 默认、deepseek 可用，无 Key 回显 |
+| 生产生成 | `POST /api/generate`（animal / 接星星 / doubao） | ✅ 200，74.1s，`engine=volcengine`，`model=doubao`，标题「小动物接星星」，HTML 9,581 字符 |
+| 生产 Remix | 同上，`remixInstruction=把星星换成宝石…` | ✅ 200，72.5s，`remixMode=full`，`remixAudit.preserved=true`（render/interactions/score/winLose 均保留），`changed=true` |
+| 错误码 | 空 Prompt / 非法 JSON | ✅ 400 `EMPTY_PROMPT` / 400 `INVALID_JSON`，证明 V3.5 生成物已上线 |
+
+证据文件：
+
+- `temp/v3.5/prod-home.html`
+- `temp/v3.5/prod-models.json`
+- `temp/v3.5/prod-generate.json`
+- `temp/v3.5/prod-remix.json`
+
+说明：
+
+- 生产生成与 Remix 均由真实 doubao 完成，说明 `api/generate.ts` 自包含生成物在 Vercel 上可正常执行，未出现跨文件导入 500。
+- 首页 JS hash 与本地 `dist/assets/index-BrX-Qvh9.js` 一致，可佐证部署对应本轮构建。
+- `v3.5.0` annotated tag 已创建于本地 `bf22c3c`；远端 tag 未推送（GitHub Desktop 未推 tag），其余交付不受影响。
 
 ---
 
@@ -172,7 +190,8 @@ curl -sS "$PROD_URL/api/models" | head -c 500
 | 项 | 说明 |
 |----|------|
 | 真实模型样本量 | 每场景 1 次，p90 仅趋势；失败 1 次为上游网络问题，未复现 |
-| 生产生成/Remix | 待 Vercel 部署后验证；若无 Key/额度，按 UAT 规则记录为未验证 |
+| 生产生成/Remix | 已验证 doubao 的创建与 Remix；未覆盖 deepseek 生产调用 |
+| 远端 tag | `v3.5.0` 仅本地；远端 tag 未推送 |
 | 成本换算 | 未配置单价，只记录 token；成本口径已文档化 |
 | 浏览器兼容 | 仅 Chrome Headless 抽查，未做 Safari/移动端真机 |
 | 并发/限流 | V3.5 不做，留给 V5.0 |

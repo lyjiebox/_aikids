@@ -50,6 +50,8 @@ API 拆分、类型与性能基线版本：不改变用户可见需求，把生�
   - 桩模式：24 次，成功率 100%，p50 3.62ms / p90 5.81ms（`temp/v3.5/baseline-stub-2026-10-21.md`）。
   - 真实模型：8 次，7 次真实生成成功（87.5%），p50 67.5s / p90 180.2s；doubao 一次上游连接失败已降级并记录（`temp/v3.5/baseline-real-2026-10-21.md`）。
   - 成本：未配置单价，基线只记录 token（成功样本优先使用上游 usage）。
+- 远端 CI：GitHub Actions run `39612404376`（`bf22c3c`）success。
+- 生产冒烟（`https://www.boxaikids.top`）：首页 200、`/api/models` 200、生成 200（`engine=volcengine`，74.1s）、Remix 200（`remixMode=full`，审计通过）、空 Prompt/非法 JSON 返回 400 与稳定错误码。
 
 ## [3.4.0] - 2026-10-20
 
