@@ -15,7 +15,6 @@ import {
   prepareGeneration,
 } from '../../server/src/services/generate.ts';
 import { parseGameOutput } from '../../server/src/services/parse.ts';
-import { GameParseError } from '../../server/src/errors.ts';
 import { parseTokenUsage } from '../../server/src/services/model.ts';
 import { ERROR_CODES } from '../../server/src/types/index.ts';
 
@@ -178,7 +177,10 @@ test('PARSE-03 无法解析时抛 GameParseError（OUTPUT_PARSE_FAILED）', () =
     assert.throws(
       () => parseGameOutput(input),
       (error) => {
-        assert.ok(error instanceof GameParseError);
+        // 跨 Node 版本 / tsx 解析时类实例可能来自不同模块缓存，
+        // 断言错误名与错误码比 instanceof 更稳定。
+        assert.ok(error instanceof Error);
+        assert.equal(error.name, 'GameParseError');
         assert.equal(error.code, ERROR_CODES.OUTPUT_PARSE_FAILED);
         return true;
       }

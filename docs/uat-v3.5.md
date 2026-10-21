@@ -359,6 +359,7 @@ Vercel 部署需与推送 commit 对应；无法确认时记录 Vercel Dashboard
 |--------|------|------|------|------|
 | BUG-3.5-01 | 截断 JSON 解析出的 `html` 末尾多一个 `"` | 旧正则只处理 `"}` 或字符串结尾，未处理结尾引号 | 正则改为 `(?:"\s*\}|"\s*$|$)` | `PARSE-01` 通过 |
 | BUG-3.5-02 | 根 typecheck 报 Hono `Context` 类型不兼容 | 根与 `server/` 各有一份 Hono（4.12.25 / 4.12.23），私有类型符号不一致 | 两端统一并锁定 `hono@4.13.13` | `npm run typecheck` 通过 |
+| BUG-3.5-03 | 远端 CI（Node 20）在 `PARSE-03` 失败：`instanceof GameParseError` 为 false | 测试用 `.ts` 后缀导入错误类，与 service 的扩展名省略导入形成两个模块实例；Node 24 未暴露，Node 20 暴露 | 断言改为错误名 + `code`（跨模块实例稳定） | 本地 Node 20 `scripts/run-tests.mjs` 63/63 通过 |
 | OBS-3.5-01 | 真实基线 doubao B2 在 60s 后连接失败并降级 | 上游网络/接口瞬时不可用，非代码路径 | 保留降级行为；如实记录 | 同模型其余 3 次成功；未复现 |
 
 ---
@@ -382,10 +383,10 @@ Vercel 部署需与推送 commit 对应；无法确认时记录 Vercel Dashboard
 | UAT-3.5-14 | `npm run bench -- --real --models doubao,deepseek --runs 1` | ⚠️ 部分通过 | 8 次，7 次真实成功（87.5%）；doubao B2 上游连接失败，已降级并记录 |
 | UAT-3.5-15 | `npm run ci` | ✅ 通过 | 退出码 0，日志 `temp/v3.5/ci-run-1.log` |
 | UAT-3.5-16 | `npm run check:docs` | ✅ 通过 | version=3.5.0，tests=9 |
-| UAT-3.5-17 | GitHub Actions | ⏳ 待推送 | 推送后记录 run 结果 |
+| UAT-3.5-17 | GitHub Actions | ⏳ 待推送 | 首次 run `39611179318` 因 Node 20 测试断言失败；已修复并补充 Node 20 本地验证，待新提交后确认 |
 | UAT-3.5-18 | 生产 curl / web_fetch | ⏳ 待部署 | 推送 Vercel 后执行 |
 | UAT-3.5-19 | Chrome Headless | ✅ 通过 | `/`、`/create`、`/gallery`、`/settings`、`/settings/models`、`/play/demo` 均渲染 |
-| UAT-3.5-20 | CHANGELOG / tag | ⏳ 待提交 | 提交后创建 `v3.5.0` |
+| UAT-3.5-20 | CHANGELOG / tag | 🚧 本地完成 | 本地已创建 `v3.5.0` annotated tag；推送后确认 |
 
 ### 13.1 通过标准
 
