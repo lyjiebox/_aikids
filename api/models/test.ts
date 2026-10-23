@@ -81,17 +81,8 @@ var ModelCallError = class extends Error {
   }
 };
 
-// server/src/services/model.ts
-var DEFAULT_ARK_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
-var DEFAULT_ALLOWED_HOSTS = [
-  "ark.cn-beijing.volces.com",
-  "api.deepseek.com",
-  "api.openai.com",
-  "open.bigmodel.cn",
-  "dashscope.aliyuncs.com",
-  "api.moonshot.cn"
-];
-var ENV_MODEL_DEFS = [
+// shared/config/models.ts
+var BUILTIN_MODEL_DEFS = [
   {
     id: "doubao",
     name: "Doubao Seed 2.0 Pro",
@@ -105,6 +96,41 @@ var ENV_MODEL_DEFS = [
     primaryEndpointEnv: "DEEPSEEK_ENDPOINT_ID"
   }
 ];
+var DEFAULT_ARK_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3/chat/completions";
+var DEFAULT_ALLOWED_MODEL_HOSTS = [
+  "ark.cn-beijing.volces.com",
+  "api.deepseek.com",
+  "api.openai.com",
+  "open.bigmodel.cn",
+  "dashscope.aliyuncs.com",
+  "api.moonshot.cn"
+];
+var MODEL_PRESETS = [
+  {
+    id: "ark",
+    name: "\u706B\u5C71\u65B9\u821F",
+    baseUrl: DEFAULT_ARK_BASE_URL
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    baseUrl: "https://api.deepseek.com/v1/chat/completions"
+  },
+  {
+    id: "openai",
+    name: "OpenAI",
+    baseUrl: "https://api.openai.com/v1/chat/completions"
+  },
+  {
+    id: "custom",
+    name: "\u81EA\u5B9A\u4E49",
+    baseUrl: ""
+  }
+];
+var DEFAULT_MODEL_BASE_URL = MODEL_PRESETS[0].baseUrl;
+
+// server/src/services/model.ts
+var ENV_MODEL_DEFS = BUILTIN_MODEL_DEFS;
 function readEnv(name) {
   const value = process.env[name];
   return typeof value === "string" ? value.trim() : "";
@@ -124,7 +150,7 @@ function getEndpoint(def) {
 }
 function getAllowedHosts() {
   const raw = readEnv("ALLOWED_MODEL_HOSTS");
-  if (!raw) return DEFAULT_ALLOWED_HOSTS;
+  if (!raw) return DEFAULT_ALLOWED_MODEL_HOSTS;
   return raw.split(",").map((item) => item.trim().toLowerCase().replace(/\.$/, "")).filter(Boolean);
 }
 function isLocalHostsAllowed() {

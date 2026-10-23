@@ -1,6 +1,6 @@
 {
   "name": "aikids-frontend",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +16,7 @@
     "check:docs": "node scripts/check-docs.mjs",
     "smoke:preview": "node scripts/smoke-preview.mjs",
     "bench": "node --import tsx scripts/bench-generate.mjs",
+    "migrate:storage": "node scripts/migrate-storage.mjs",
     "ci": "npm run typecheck && npm run build && npm run build:server && npm test && npm run check:inline && npm run check:docs && npm run smoke:preview",
     "build:server": "tsc -p server/tsconfig.json"
   },

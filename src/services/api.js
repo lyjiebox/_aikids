@@ -50,9 +50,13 @@ async function requestJson(path, options = {}, timeoutMs = 10000) {
     }
 
     if (!res.ok) {
-      throw new Error(
+      // V3.6：把稳定错误码与状态码挂到 Error 上，供本地 telemetry 使用
+      const error = new Error(
         (data && data.message) || `API 请求失败（${res.status}）`
       );
+      error.code = (data && data.code) || `HTTP_${res.status}`;
+      error.status = res.status;
+      throw error;
     }
 
     if (!data) {
@@ -62,7 +66,13 @@ async function requestJson(path, options = {}, timeoutMs = 10000) {
     return data;
   } catch (error) {
     if (error && error.name === "AbortError") {
-      throw new Error("请求超时，请稍后再试");
+      const timeoutError = new Error("请求超时，请稍后再试");
+      timeoutError.code = "TIMEOUT";
+      throw timeoutError;
+    }
+    // 网络层失败（DNS / 断网 / CORS）没有服务端错误码，补一个稳定值供 telemetry 使用
+    if (error && typeof error === "object" && !error.code) {
+      error.code = "NETWORK";
     }
     throw error;
   } finally {
@@ -103,6 +113,7 @@ async function requestJson(path, options = {}, timeoutMs = 10000) {
  * @typedef {Object} GenerateGameResponse
  * @property {boolean} success
  * @property {GenerateGameData} [data]
+ * @property {string} [code] - V3.5 稳定错误码
  * @property {string} [message]
  */
 

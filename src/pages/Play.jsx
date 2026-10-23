@@ -22,6 +22,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import RemixModal from '../components/RemixModal';
 import { createRemixContext } from '../services/remix';
+import { recordTelemetryEvent } from '../services/telemetry';
 import './Play.css';
 
 function Play() {
@@ -47,6 +48,11 @@ function Play() {
 
   const handleRemixConfirm = (instruction) => {
     if (!work) return;
+    // V3.6：只记长度，不记改编文本
+    recordTelemetryEvent('remix', {
+      workId: work.id,
+      instructionChars: typeof instruction === 'string' ? instruction.length : 0,
+    });
     // V3.3：透传完整 gameHtml（不再 slice 300 字符），服务端据此分析并保留原框架
     const remixContext = createRemixContext(work, instruction);
     sessionStorage.setItem('aikids-remix-context', JSON.stringify(remixContext));
@@ -58,14 +64,20 @@ function Play() {
     navigate('/gallery');
   };
 
-  // 用 ref 防止 React StrictMode 下 useEffect 触发两次
-  const countedRef = useRef(false);
+  // 用 ref 防止 React StrictMode 下 useEffect 触发两次；
+  // 记录已计数的作品 ID，路由切到另一作品时仍能正确计数。
+  const countedRef = useRef(null);
 
-  // 进入页面时记录游玩次数（只记一次）
+  // 进入页面时记录游玩次数（每个作品只记一次）
   useEffect(() => {
-    if (work && !countedRef.current) {
-      countedRef.current = true;
+    if (work && countedRef.current !== work.id) {
+      countedRef.current = work.id;
       incrementPlayCount(work.id);
+      recordTelemetryEvent('play', {
+        workId: work.id,
+        templateId: work.templateId,
+        isRemix: Boolean(work.remixFrom),
+      });
     }
   }, [work, incrementPlayCount]);
 

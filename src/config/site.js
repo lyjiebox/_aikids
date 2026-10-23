@@ -3,11 +3,16 @@
  * site.js — 全局配置
  * ============================================================
  * 
- * 集中管理所有可配置项，方便统一修改：
+ * 集中管理站点级可配置项：
  * - SITE_CONFIG: 应用名称、API 地址
  * - DEFAULT_SETTINGS: 家长设置的默认值
- * - TEMPLATES: 游戏模板列表（首页展示 + 创作页选择）
+ * - TEMPLATES: 游戏模板列表（V3.6 起由 shared/config/templates.ts 提供）
+ *
+ * 模板、Prompt、模型清单的外部配置统一放在 shared/config/，
+ * 修改后需要重新构建（npm run build / build:api / build:server）。
  */
+
+import { GAME_TEMPLATES } from '../../shared/config/templates';
 
 /** 站点基础配置 */
 export const SITE_CONFIG = {
@@ -24,56 +29,10 @@ export const DEFAULT_SETTINGS = {
 };
 
 /**
- * 游戏模板列表
- * 
- * 每个模板包含：
- * - id: 唯一标识，用于 API 请求和路由参数
- * - name: 显示名称（中文）
- * - icon: emoji 图标
- * - promptHint: 传给 AI 的提示前缀（增强生成效果）
- * - category: 分类（animal/vehicle/fantasy/other）
+ * 游戏模板列表（对外保持 V3.1 起的字段与导入路径）
+ *
+ * 数据源：shared/config/templates.ts
+ * 每个模板包含 id / name / icon / promptHint / category，
+ * 服务端另用其中的 aiHint 作为 Prompt 前缀。
  */
-export const TEMPLATES = [
-  {
-    id: "free",
-    name: "自由创作",
-    icon: "✨",
-    promptHint: "根据孩子的自由想象生成游戏",
-    category: "other",
-  },
-  {
-    id: "animal",
-    name: "动物乐园",
-    icon: "🐰",
-    promptHint: "生成以动物为主题的游戏，如打地鼠、喂兔子等",
-    category: "animal",
-  },
-  {
-    id: "vehicle",
-    name: "汽车王国",
-    icon: "🚗",
-    promptHint: "生成以交通工具为主题的游戏，如赛车、停车等",
-    category: "vehicle",
-  },
-  {
-    id: "princess",
-    name: "公主城堡",
-    icon: "🏰",
-    promptHint: "生成以公主/城堡为主题的游戏，如收集宝石、装扮等",
-    category: "fantasy",
-  },
-  {
-    id: "dinosaur",
-    name: "恐龙世界",
-    icon: "🦕",
-    promptHint: "生成以恐龙为主题的游戏，如找恐龙、孵化恐龙蛋等",
-    category: "fantasy",
-  },
-  {
-    id: "space",
-    name: "太空冒险",
-    icon: "🚀",
-    promptHint: "生成以太空为主题的游戏，如开飞船、打陨石等",
-    category: "other",
-  },
-];
+export const TEMPLATES = GAME_TEMPLATES;

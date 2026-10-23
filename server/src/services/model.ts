@@ -32,6 +32,12 @@ import {
   type ResolvedModel,
   type TokenUsage,
 } from '../types';
+import {
+  BUILTIN_MODEL_DEFS,
+  DEFAULT_ALLOWED_MODEL_HOSTS,
+  DEFAULT_ARK_BASE_URL,
+  type BuiltinModelDef,
+} from '../../../shared/config/models';
 
 // 兼容 V3.4 的导入路径（server/src/types 已迁移到共享类型）
 export type {
@@ -51,39 +57,9 @@ export { ModelCallError, ModelConfigError } from '../errors';
 // 常量
 // ============================================================
 
-const DEFAULT_ARK_BASE_URL =
-  'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
-
-const DEFAULT_ALLOWED_HOSTS = [
-  'ark.cn-beijing.volces.com',
-  'api.deepseek.com',
-  'api.openai.com',
-  'open.bigmodel.cn',
-  'dashscope.aliyuncs.com',
-  'api.moonshot.cn',
-];
-
-interface EnvModelDef {
-  id: string;
-  name: string;
-  endpointEnvVars: string[];
-  primaryEndpointEnv: string;
-}
-
-const ENV_MODEL_DEFS: EnvModelDef[] = [
-  {
-    id: 'doubao',
-    name: 'Doubao Seed 2.0 Pro',
-    endpointEnvVars: ['DOUBAO_ENDPOINT_ID', 'VOLCENGINE_ENDPOINT_ID'],
-    primaryEndpointEnv: 'DOUBAO_ENDPOINT_ID',
-  },
-  {
-    id: 'deepseek',
-    name: 'DeepSeek V4 Pro',
-    endpointEnvVars: ['DEEPSEEK_ENDPOINT_ID'],
-    primaryEndpointEnv: 'DEEPSEEK_ENDPOINT_ID',
-  },
-];
+// 内置模型清单、默认地址、白名单统一来自 shared/config/models.ts。
+// 环境变量在运行时读取，确保 server/src/loadEnv.ts 先加载 .env。
+const ENV_MODEL_DEFS: BuiltinModelDef[] = BUILTIN_MODEL_DEFS;
 
 interface InternalEnvModel {
   info: EnvModelInfo;
@@ -108,7 +84,7 @@ function getArkBaseUrl(): string {
   return readEnv('VOLCENGINE_BASE_URL') || DEFAULT_ARK_BASE_URL;
 }
 
-function getEndpoint(def: EnvModelDef): string {
+function getEndpoint(def: BuiltinModelDef): string {
   for (const key of def.endpointEnvVars) {
     const value = readEnv(key);
     if (value) return value;
@@ -118,7 +94,7 @@ function getEndpoint(def: EnvModelDef): string {
 
 function getAllowedHosts(): string[] {
   const raw = readEnv('ALLOWED_MODEL_HOSTS');
-  if (!raw) return DEFAULT_ALLOWED_HOSTS;
+  if (!raw) return DEFAULT_ALLOWED_MODEL_HOSTS;
   return raw
     .split(',')
     .map((item) => item.trim().toLowerCase().replace(/\.$/, ''))

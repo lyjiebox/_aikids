@@ -38,6 +38,7 @@ import {
   loadCustomModels,
   saveCustomModels,
 } from '../services/storage';
+import { normalizeSnapshot } from '../services/storage-schema';
 import { fetchModelCatalog } from '../services/api';
 import {
   loadSelectedModelId,
@@ -112,6 +113,22 @@ function appReducer(state, action) {
     // 更新家长设置（部分更新，合并到现有设置）
     case 'SET_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } };
+
+    // V3.6：导入备份后一次性替换作品 / 设置 / 自定义模型
+    // 仍由既有保存 effect 落盘，保持单一写入路径。
+    case 'IMPORT_SNAPSHOT': {
+      const snapshot = normalizeSnapshot(action.payload);
+      return {
+        ...state,
+        works: snapshot.works,
+        settings: { ...DEFAULT_SETTINGS, ...snapshot.settings },
+        models: {
+          ...state.models,
+          custom: snapshot.models,
+          initialized: true,
+        },
+      };
+    }
 
     // 设置生成状态
     case 'SET_GENERATING':
@@ -343,6 +360,12 @@ export function AppProvider({ children }) {
     []
   );
 
+  // V3.6：导入备份（Settings 页调用）。数据规范化在 storage-schema。
+  const importSnapshot = useCallback(
+    (snapshot) => dispatch({ type: 'IMPORT_SNAPSHOT', payload: snapshot }),
+    []
+  );
+
   const addCustomModel = useCallback(
     (model) => dispatch({ type: 'ADD_CUSTOM_MODEL', payload: model }),
     []
@@ -370,6 +393,7 @@ export function AppProvider({ children }) {
       incrementPlayCount,
       incrementRemixCount,
       updateSettings,
+      importSnapshot,
       addCustomModel,
       updateCustomModel,
       deleteCustomModel,
@@ -383,6 +407,7 @@ export function AppProvider({ children }) {
       incrementPlayCount,
       incrementRemixCount,
       updateSettings,
+      importSnapshot,
       addCustomModel,
       updateCustomModel,
       deleteCustomModel,

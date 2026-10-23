@@ -76,6 +76,7 @@ const requiredScripts = [
   'check:docs',
   'smoke:preview',
   'bench',
+  'migrate:storage',
 ];
 for (const name of requiredScripts) {
   if (!pkg.scripts || typeof pkg.scripts[name] !== 'string') {
@@ -86,6 +87,9 @@ for (const name of requiredScripts) {
 const testGroups = {
   unit: [
     'tests/unit/storage.test.mjs',
+    'tests/unit/storage-schema.test.mjs',
+    'tests/unit/telemetry.test.mjs',
+    'tests/unit/config.test.mjs',
     'tests/unit/model-utils.test.mjs',
     'tests/unit/remix-core.test.mjs',
     'tests/unit/generate-service.test.mjs',
@@ -101,6 +105,18 @@ for (const [group, files] of Object.entries(testGroups)) {
   for (const file of files) {
     if (!exists(file)) errors.push(`缺少 ${group} 测试：${file}`);
   }
+}
+
+// V3.6：配置外置的单一来源必须存在
+for (const file of [
+  'shared/config/templates.ts',
+  'shared/config/prompts.ts',
+  'shared/config/models.ts',
+  'src/services/storage-schema.js',
+  'src/services/telemetry.js',
+  'scripts/migrate-storage.mjs',
+]) {
+  if (!exists(file)) errors.push(`缺少 V3.6 文件：${file}`);
 }
 
 // 生成物必须带 banner，且不含旧的内联源/跨目录导入

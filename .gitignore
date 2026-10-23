@@ -31,5 +31,8 @@ learning/
 
 # Test artifacts (keep test scripts, ignore heavy generated files)
 temp/**/chrome-profile*/
+temp/**/chrome-*/
+temp/**/downloads/
+temp/**/crash/
 temp/**/esbuild-check/
 temp/**/*.log

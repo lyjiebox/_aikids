@@ -2,6 +2,47 @@
 
 本项目遵循「一个版本一个 tag」的发布方式。版本号与 `package.json`、`server/package.json` 保持一致。
 
+## [3.6.0] - 2026-10-23
+
+扩展性缝版本：不改变主流程，把存储、数据模型、配置、事件四条边界做成可替换的缝，并为 V5.1 云端准备迁移脚本。唯一新增用户入口是 Settings 内由家长验证保护的「数据备份 / 诊断日志」。
+
+### Added
+
+- 存储 schema 与迁移：`src/services/storage-schema.js` 提供规范化、`schemaVersion`、UUID、导出信封、导入解析、合并/覆盖、云端迁移纯函数。
+- 数据备份：Settings 支持导出全部数据（作品 / 设置 / 自定义模型，含 API Key）与导入备份；支持合并（默认）与覆盖（二次确认），并显示新增/跳过摘要。
+- 本地 telemetry：`src/services/telemetry.js` 记录 `generate / play / remix / failure` 四类事件，最多 200 条，只存 `localStorage`，支持手动导出与清空；不记录 Prompt、HTML、API Key。
+- 配置外置：新增 `shared/config/{templates,prompts,models}.ts` 作为模板、Prompt、内置模型清单与前端模型预设的单一来源。
+- V5.1 迁移：`buildCloudMigration` 纯函数 + `npm run migrate:storage` CLI，输出保留本地 ID、补齐 `ownerId/visibility`、剔除 API Key 的迁移 JSON。
+- 新增单元测试：`storage-schema`、`telemetry`、`config`，并登记进 `check:docs`。
+
+### Changed
+
+- 新作品 ID 改为 UUID v4（`createWorkId`）；**旧作品保留原 ID**，加载时只补 `schemaVersion=1`、`ownerId=null`、`visibility=private`。
+- `src/services/storage.js` 的读写统一经过 schema 规范化；作品、设置、自定义模型的存储键不变。
+- `src/context/AppContext.jsx` 新增 `IMPORT_SNAPSHOT` / `importSnapshot`，导入仍由既有保存 effect 落盘。
+- `settings` 页面在「AI 模型配置」与「清空所有作品」之间新增「数据备份 / 诊断日志」区块。
+- `src/pages/Create.tsx`、`src/pages/Play.jsx` 接入本地 telemetry；`src/services/api.js` 的错误对象附带 `code/status`。
+- 服务端 `prompt.ts`、`remix.ts`、`model.ts` 改为读取 `shared/config/*`，旧导出名保留。
+- `server/tsconfig.json` 的 `rootDir` 放宽到项目根以编译 `shared/`；构建产物路径变为 `dist/server/src/index.js`，`npm start` 同步更新。
+- 版本号更新为 `3.6.0`（根 / server / lock）。
+
+### Security
+
+- 按产品决策，备份文件**包含自定义模型 API Key**；Settings 显著提示仅保存在自己设备，下载不经过服务端，导出内容不写日志。
+- 导入只做 JSON 解析与字段校验，不执行内容；游戏 HTML 仍在 `sandbox="allow-scripts"` iframe 中运行。
+- Telemetry 不含 Prompt 全文、游戏 HTML、API Key、完整接口地址；消息截断并脱敏。
+- 云端迁移产物显式剔除 `apiKey`。
+
+### Verified
+
+- `npm run typecheck` / `npm run build` / `npm run build:server` / `npm run build:api`：通过。
+- `npm test`：90 项全部通过（新增 storage-schema / telemetry / config 用例）。
+- `npm run check:inline`：三个 `api/` 生成物与源码一致。
+- `npm run check:docs`：版本、CHANGELOG、design/uat、配置与测试资产一致。
+- `npm run smoke:preview`：构建产物首页/SPA 路由正常。
+- 迁移 CLI：样例备份 2 个旧作品保留原 ID，输出无 `apiKey`，非法 JSON 退出码 1。
+- 远端 CI / 生产冒烟结果见 `docs/uat-v3.6.md` 执行记录。
+
 ## [3.5.0] - 2026-10-21
 
 API 拆分、类型与性能基线版本：不改变用户可见需求，把生成链路拆成可维护的分层，消除 `api/` 与 `server/` 双实现，并建立可复跑的耗时/成功率/token 基线。

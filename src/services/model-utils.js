@@ -10,35 +10,22 @@
  * - 当前模型展示文案、生成请求参数组装
  *
  * 不依赖 React，方便单元测试与复用。
+ *
+ * V3.6：常用接口预设移到 shared/config/models.ts，
+ * 这里保留同名导出，Models 页导入路径不变。
  */
+
+import {
+  DEFAULT_MODEL_BASE_URL as SHARED_DEFAULT_MODEL_BASE_URL,
+  MODEL_PRESETS as SHARED_MODEL_PRESETS,
+} from '../../shared/config/models';
 
 export const MAX_CUSTOM_MODELS = 20;
 
-/** 常用接口地址预设 */
-export const MODEL_PRESETS = [
-  {
-    id: "ark",
-    name: "火山方舟",
-    baseUrl: "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
-  },
-  {
-    id: "deepseek",
-    name: "DeepSeek",
-    baseUrl: "https://api.deepseek.com/v1/chat/completions",
-  },
-  {
-    id: "openai",
-    name: "OpenAI",
-    baseUrl: "https://api.openai.com/v1/chat/completions",
-  },
-  {
-    id: "custom",
-    name: "自定义",
-    baseUrl: "",
-  },
-];
+/** 常用接口地址预设（来自 shared/config/models.ts） */
+export const MODEL_PRESETS = SHARED_MODEL_PRESETS;
 
-export const DEFAULT_MODEL_BASE_URL = MODEL_PRESETS[0].baseUrl;
+export const DEFAULT_MODEL_BASE_URL = SHARED_DEFAULT_MODEL_BASE_URL;
 
 const SELECTED_MODEL_KEY = "aikids-selected-model";
 

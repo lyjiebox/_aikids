@@ -16,6 +16,6 @@
     "jsx": "react-jsx",
     "types": ["node"]
   },
-  "include": ["api/**/*.ts", "api-src/**/*.ts", "src/**/*.ts", "src/**/*.tsx"],
+  "include": ["api/**/*.ts", "api-src/**/*.ts", "shared/**/*.ts", "src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["node_modules", "dist", "server", "client-taro-broken", "tests"]
 }

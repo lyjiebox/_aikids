@@ -32,6 +32,8 @@ import {
 import TemplatePicker from '../components/TemplatePicker';
 import LoadingAnimation from '../components/LoadingAnimation';
 import { VoiceInput } from '../components/VoiceInput';
+import { createWorkId } from '../services/storage-schema';
+import { recordTelemetryEvent } from '../services/telemetry';
 import './Create.css';
 
 interface RemixContext {
@@ -142,6 +144,26 @@ function Create() {
       setFallbackWarning(res.data?.warning || null);
       if (res.success && res.data) {
         if (timerRef.current) clearInterval(timerRef.current);
+        const durationMs = Date.now() - startTimeRef.current;
+        // V3.6：Remix 生成结果只记结构化字段，不记 Prompt / HTML
+        recordTelemetryEvent('generate', {
+          mode: 'remix',
+          ok: finalEngine === 'volcengine',
+          fallback:
+            Boolean(res.data.warning) ||
+            finalEngine === 'mock' ||
+            Boolean(res.data.remixFallback),
+          engine: finalEngine,
+          modelId: res.data.model || null,
+          modelName: res.data.modelName || null,
+          modelSource: res.data.modelSource || null,
+          templateId: ctx.templateId,
+          durationMs,
+          remixMode: res.data.remixMode || null,
+          preserved: Boolean(
+            (res.data.remixAudit as { preserved?: boolean } | null)?.preserved
+          ),
+        });
         // V3.3：模型不可用时后端保留原游戏；不新增重复作品，直接回到原作品
         if (res.data.remixFallback) {
           setIsGenerating(false);
@@ -149,9 +171,9 @@ function Create() {
           navigate(`/play/${ctx.remixFrom}`);
           return;
         }
-        const generationTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const generationTime = Math.floor(durationMs / 1000);
         const work = {
-          id: Date.now().toString(),
+          id: createWorkId(),
           title: res.data.title,
           templateId: ctx.templateId,
           userPrompt: ctx.remixInstruction,
@@ -177,12 +199,25 @@ function Create() {
         setTimeout(() => navigate(`/play/${work.id}`), 1200);
       } else {
         if (timerRef.current) clearInterval(timerRef.current);
+        recordTelemetryEvent('failure', {
+          scope: 'remix',
+          code: res.code,
+          message: res.message || '生成失败',
+          durationMs: Date.now() - startTimeRef.current,
+        });
         alert(res.message || '生成失败，请重试！');
         setStep(2);
       }
     } catch (err) {
       if (timerRef.current) clearInterval(timerRef.current);
       console.error('生成失败:', err);
+      const error = err as { code?: string; message?: string } | null;
+      recordTelemetryEvent('failure', {
+        scope: 'remix',
+        code: error?.code,
+        message: error?.message || '网络请求失败',
+        durationMs: Date.now() - startTimeRef.current,
+      });
       alert('网络请求失败，请检查网络后重试！');
       setStep(2);
     }
@@ -229,11 +264,25 @@ function Create() {
           clearInterval(timerRef.current);
           timerRef.current = null;
         }
-        const generationTime = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        
+        const durationMs = Date.now() - startTimeRef.current;
+        const generationTime = Math.floor(durationMs / 1000);
+
+        // V3.6：只记结构化字段，不记 Prompt / HTML
+        recordTelemetryEvent('generate', {
+          mode: 'create',
+          ok: finalEngine === 'volcengine',
+          fallback: Boolean(res.data.warning) || finalEngine === 'mock',
+          engine: finalEngine,
+          modelId: res.data.model || null,
+          modelName: res.data.modelName || null,
+          modelSource: res.data.modelSource || null,
+          templateId: selectedTemplate,
+          durationMs,
+        });
+
         // 构建作品对象
         const work = {
-          id: Date.now().toString(),           // 用时间戳做唯一 ID
+          id: createWorkId(),                  // V3.6：新作品使用 UUID，旧作品保留原 ID
           title: res.data.title,
           templateId: selectedTemplate,
           userPrompt: userInput,
@@ -256,6 +305,12 @@ function Create() {
           clearInterval(timerRef.current);
           timerRef.current = null;
         }
+        recordTelemetryEvent('failure', {
+          scope: 'generate',
+          code: res.code,
+          message: res.message || '生成失败',
+          durationMs: Date.now() - startTimeRef.current,
+        });
         alert(res.message || '生成失败，请重试！');
         setStep(2);
       }
@@ -266,6 +321,13 @@ function Create() {
         timerRef.current = null;
       }
       console.error('生成失败:', err);
+      const error = err as { code?: string; message?: string } | null;
+      recordTelemetryEvent('failure', {
+        scope: 'generate',
+        code: error?.code,
+        message: error?.message || '网络请求失败',
+        durationMs: Date.now() - startTimeRef.current,
+      });
       alert('网络请求失败，请检查网络后重试！');
       setStep(2);
     }
