@@ -444,9 +444,9 @@ Vercel 部署需与推送 commit 对应；无法确认时记录部署时间与 c
 | UAT-3.6-19~20 | `migrate-storage.mjs` | ✅ 通过 | 2 个旧作品保留 ID、owner 生效、输出无 `apiKey`；非法输入退出码 1 |
 | UAT-3.6-21~22 | Settings / 创作 / 播放 / 画廊 / 模型页 | ✅ 通过 | 备份入口在 ParentGate 后；主流程无回归；无未捕获异常 |
 | UAT-3.6-23~24 | `npm run ci`（2 次）/ `check:docs` | ✅ 通过 | 91/91；version=3.6.0；日志 `temp/v3.6/ci-run-2.log` |
-| UAT-3.6-25 | GitHub Actions | 🚧 待推送后确认 | — |
-| UAT-3.6-26 | 生产 curl | 🚧 待部署后确认 | — |
-| UAT-3.6-27 | CHANGELOG / proposal / tag | ✅ 文档完成 | CHANGELOG 3.6.0、proposal 状态已更新；tag 待发布时创建 |
+| UAT-3.6-25 | GitHub Actions | ✅ 通过 | run `39893330258`（commit `a71db4d`）success |
+| UAT-3.6-26 | 生产 curl + Headless UI | ✅ 通过 | `www.boxaikids.top` 首页 200、`/settings` 200、`/api/models` 200；部署 `7269173611`（`a71db4d`）success；生产 UI UAT 26/26 |
+| UAT-3.6-27 | CHANGELOG / proposal / tag | ✅ 完成 | CHANGELOG 3.6.0、proposal 状态已更新；本地 annotated tag `v3.6.0`（指向 `a71db4d`，未推送远端 tag） |
 
 ### 13.1 通过标准
 

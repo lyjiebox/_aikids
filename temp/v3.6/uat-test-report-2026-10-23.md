@@ -20,8 +20,8 @@
 | 创作 / UUID / 生成与 Remix telemetry UI 流程 | ✅ 12 项检查通过 |
 | V5.1 迁移 CLI | ✅ 通过 |
 | 编译后的 `server/dist` 启动 | ✅ 通过 |
-| 远端 CI | 待推送后确认 |
-| Vercel 生产冒烟 | 待部署后确认 |
+| 远端 CI | ✅ run 39893330258（a71db4d）success |
+| Vercel 生产冒烟 | ✅ 部署 7269173611（a71db4d）success；生产 UI UAT 26/26 |
 
 ---
 
@@ -180,7 +180,8 @@ node scripts/migrate-storage.mjs temp/v3.6/backup-sample.json \
 - 未用真实模型生成游戏（避免消耗额度）；真实生成链路由 V3.5 基线与现有集成/契约测试覆盖，本版未改 Prompt 语义。
 - Headless Chrome 仅覆盖 Chrome；未做 Safari / 移动端真机。
 - 导出文件包含 API Key 属于明确产品决策；本次只验证“提示 + 本地生成 + 不上传”，未做文件加密。
-- 远端 CI 与 Vercel 生产冒烟待推送后补充。
+- 只在生产环境复跑了 Settings 导出/导入 UI UAT，未在生产用真实模型生成游戏（避免消耗额度）。
+- 远端 tag 未推送；本地 tag 指向发布 commit。
 
 ---
 
@@ -194,3 +195,26 @@ node scripts/migrate-storage.mjs temp/v3.6/backup-sample.json \
 | `temp/v3.6/backup-sample.json` | 迁移 CLI 样例（含测试用假 Key，未提交） |
 | `temp/v3.6/cloud-migration-sample.json` | 迁移 CLI 输出样例 |
 | `temp/v3.6/server-dist.log` | 编译后 server 启动日志 |
+
+
+---
+
+## 10. 远端与生产验证（补充）
+
+### 10.1 GitHub Actions
+
+- 远端 CI：run `39893330258`（commit `a71db4d`），conclusion `success`。
+- 覆盖：typecheck → build → build:server → 91 项测试 → check:inline → check:docs → preview smoke（Node 20）。
+
+### 10.2 Vercel
+
+| 项 | 结果 |
+|----|------|
+| 部署 | `7269173611`（commit `a71db4d`，Production，success） |
+| 首页 | `https://boxaikids.top/` 308 → `https://www.boxaikids.top/` 200 |
+| `/settings` | 200（SPA 回退） |
+| `/api/models` | 200，`success=true`，模型可用，不含 Key |
+| 前端产物 | 生产 `assets/index-5WuNvK4b.js` 与本地构建一致，包含「数据备份」 |
+| 生产 UI UAT | Settings 导出/导入/诊断日志 26/26 通过 |
+
+生产 URL：`https://www.boxaikids.top`（`boxaikids.top` 308 跳转）。
