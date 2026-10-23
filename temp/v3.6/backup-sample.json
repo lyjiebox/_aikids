@@ -1,0 +1,47 @@
+{
+  "works": [
+    {
+      "id": "1700000000000",
+      "title": "旧星星收集",
+      "templateId": "space",
+      "userPrompt": "做一个接星星的小游戏",
+      "gameHtml": "<html><body><canvas id=\"g\"></canvas></body></html>",
+      "engine": "volcengine",
+      "modelId": "deepseek",
+      "modelName": "DeepSeek V4 Pro",
+      "modelSource": "env",
+      "createdAt": 1690000000000,
+      "playCount": 5,
+      "generationTime": 42,
+      "remixCount": 1
+    },
+    {
+      "id": "1700000000001",
+      "title": "旧打地鼠",
+      "templateId": "animal",
+      "userPrompt": "做一个打地鼠游戏，地鼠是小兔子",
+      "gameHtml": "<html><body><div id=\"mole\"></div></body></html>",
+      "engine": "volcengine",
+      "createdAt": 1690000001000,
+      "playCount": 2,
+      "remixCount": 0
+    }
+  ],
+  "settings": {
+    "dailyTimeLimit": 30,
+    "sessionTimeLimit": 20,
+    "allowVoiceInput": true,
+    "contentFilterLevel": "strict"
+  },
+  "models": [
+    {
+      "id": "custom-demo",
+      "name": "DeepSeek 演示",
+      "baseUrl": "https://api.deepseek.com/v1/chat/completions",
+      "model": "deepseek-chat",
+      "apiKey": "sk-demo-not-real",
+      "createdAt": 1690000000000,
+      "updatedAt": 1690000000000
+    }
+  ]
+}

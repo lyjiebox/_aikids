@@ -1,0 +1,69 @@
+{
+  "kind": "aikids-cloud-migration",
+  "app": "aikids",
+  "schemaVersion": 1,
+  "ownerId": "family-001",
+  "migratedAt": "2026-10-23T03:02:39.647Z",
+  "works": [
+    {
+      "id": "1700000000000",
+      "ownerId": "family-001",
+      "visibility": "private",
+      "schemaVersion": 1,
+      "title": "旧星星收集",
+      "templateId": "space",
+      "gameHtml": "<html><body><canvas id=\"g\"></canvas></body></html>",
+      "createdAt": 1690000000000,
+      "payload": {
+        "id": "1700000000000",
+        "title": "旧星星收集",
+        "templateId": "space",
+        "userPrompt": "做一个接星星的小游戏",
+        "gameHtml": "<html><body><canvas id=\"g\"></canvas></body></html>",
+        "engine": "volcengine",
+        "modelId": "deepseek",
+        "modelName": "DeepSeek V4 Pro",
+        "modelSource": "env",
+        "createdAt": 1690000000000,
+        "playCount": 5,
+        "generationTime": 42,
+        "remixCount": 1,
+        "schemaVersion": 1,
+        "ownerId": null,
+        "visibility": "private"
+      }
+    },
+    {
+      "id": "1700000000001",
+      "ownerId": "family-001",
+      "visibility": "private",
+      "schemaVersion": 1,
+      "title": "旧打地鼠",
+      "templateId": "animal",
+      "gameHtml": "<html><body><div id=\"mole\"></div></body></html>",
+      "createdAt": 1690000001000,
+      "payload": {
+        "id": "1700000000001",
+        "title": "旧打地鼠",
+        "templateId": "animal",
+        "userPrompt": "做一个打地鼠游戏，地鼠是小兔子",
+        "gameHtml": "<html><body><div id=\"mole\"></div></body></html>",
+        "engine": "volcengine",
+        "createdAt": 1690000001000,
+        "playCount": 2,
+        "remixCount": 0,
+        "schemaVersion": 1,
+        "ownerId": null,
+        "visibility": "private"
+      }
+    }
+  ],
+  "models": [
+    {
+      "id": "custom-demo",
+      "name": "DeepSeek 演示",
+      "baseUrl": "https://api.deepseek.com/v1/chat/completions",
+      "model": "deepseek-chat"
+    }
+  ]
+}
